@@ -3,9 +3,7 @@ import openmesh as om
 import numpy as np
 
 
-def main():
-	print("Hello world")
-
+def testFunction():
 	mesh = om.TriMesh()
 
 	# add a a couple of vertices to the mesh
@@ -44,7 +42,16 @@ def main():
 	# write and read meshes
 	om.write_mesh('test.off', mesh)
 	mesh_2 = om.read_trimesh('test.off')
-	
+
+
+def main():
+	print("Hello world")
+
+	mesh = om.read_trimesh('../Models/bunny.obj')
+
+	for halfedge in mesh.halfedges():
+		print(halfedge.idx())
+
 	return 0
 
 
