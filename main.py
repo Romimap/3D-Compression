@@ -7,20 +7,21 @@ import Code
 from Code.Quantization import quantizeVertices
 from Code.Quantization import readVerticesBits
 
-
-
 def testFunction():
 	print("Testing IO for meshes ...")
 	mesh = open3d.io.read_triangle_mesh("Models/bunny.obj")
-	mesh.vertices, bitstring = quantizeVertices(mesh.vertices, 10)
-
 	mesh.compute_vertex_normals()
+	print(mesh.vertex_normals)
+	bitstring = quantizeVertices(mesh, 10)
+
 	#open3d.visualization.draw_geometries([mesh])
+	#print(bitstring)
 
 	bitArray = bitarray.bitarray([0 for _ in range(8-(len(bitstring)%8))] + list(map(int,bitstring)))
 
 	with open("bits","wb+") as f:
 		bitArray.tofile(f)
+	
 	readVerticesBits(bitstring)
 	
 
