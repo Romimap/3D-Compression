@@ -114,19 +114,24 @@ def quantizeVertices (mesh, k):
         vertex[1] = remap(vertex[1], 0, kpow, min[1], max[1])
         vertex[2] = remap(vertex[2], 0, kpow, min[2], max[2])
 
-
     # * * * * * * * * * * 
     # * * * NORMALS * * * 
     # * * * * * * * * * * 
     fibSphere = fibonacci_sphere()
     for normal in normals:
         id = closestNormalID(fibSphere, normal)
+        normal[0] = fibSphere[id][0]
+        normal[1] = fibSphere[id][1]
+        normal[2] = fibSphere[id][2]
         ansBits += '{0:017b}'.format(int(id))
-        normal = fibSphere[id]
 
-
+    
     print ("before")
+    print(fibSphere)
+    print(" ")
     print (normals)
+
+
     return ansBits
 
 def readVerticesBits(bitstring):
@@ -166,6 +171,7 @@ def readVerticesBits(bitstring):
         vertices[i] = vertex
 
     # Normals
+    n = 228 + (k * 3 * vertexCount)
     fibSphere = fibonacci_sphere()
     kn = 17
     normals = numpy.zeros([vertexCount, 3])
@@ -177,6 +183,8 @@ def readVerticesBits(bitstring):
         normals[i] = fibSphere[x]
 
     print ("after")
+    print(fibSphere)
+    print(" ")
     print (normals)
 
     return vertices, normals
