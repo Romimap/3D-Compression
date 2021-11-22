@@ -1,3 +1,4 @@
+import Code.bcolors
 import sys
 import os
 from numpy.core.numeric import indices
@@ -6,19 +7,25 @@ import copy
 import numpy
 import struct
 import math
+import random
 from codecs import decode
 
-# https://newbedev.com/how-to-convert-a-binary-string-into-a-float-value 
+headerSize = 228
+
+
+# https://newbedev.com/how-to-convert-a-binary-string-into-a-float-value
 def float_to_bin(num):
     return bin(struct.unpack('!I', struct.pack('!f', num))[0])[2:].zfill(32)
 
-# https://newbedev.com/how-to-convert-a-binary-string-into-a-float-value 
+
+# https://newbedev.com/how-to-convert-a-binary-string-into-a-float-value
 def bin_to_float(binary):
-    return struct.unpack('!f',struct.pack('!I', int(binary, 2)))[0]
+    return struct.unpack('!f', struct.pack('!I', int(binary, 2)))[0]
+
 
 # https://stackoverflow.com/a/26127012
 # Edited so it uses numpy instead of vanilla arrays
-def fibonacci_sphere(samples=100):
+def fibonacci_sphere(samples=131072): #NOTE: might be 131071
     points = numpy.zeros([samples, 3])
     phi = math.pi * (3. - math.sqrt(5.))  # golden angle in radians
 
@@ -35,43 +42,35 @@ def fibonacci_sphere(samples=100):
 
     return points
 
-def closestNormalID (fibSphere, normal):
-    closestid = -1
-    closest = 999999
-    #NOTE : Could use a kdTree here
-    #NOTE : We should use a kdTree its flocking slow
-    for i in range(len(fibSphere)):
-        fibNormal = fibSphere[i]
-        dx, dy, dz = (fibNormal[0] - normal[0]), (fibNormal[1] - normal[1]), (fibNormal[2] - normal[2])
-        d = dx*dx + dy*dy + dz*dz   
-        if d < closest:
-            closest = d
-            closestid = i
-    return closestid
 
+def closestNormalID(kdFibSphere, normal):
+    [k, idx, _] = kdFibSphere.search_knn_vector_3d(normal, 5)
+    return idx[0]
 
+def remap(value, minFrom, maxFrom, minTo, maxTo):
+    return ((value - minFrom) / (maxFrom - minFrom)) * (maxTo - minTo) + minTo
 
-
-def remap (value, minFrom, maxFrom, minTo, maxTo):
-    return ((value - minFrom) / (maxFrom - minFrom) ) * (maxTo - minTo) + minTo
 
 #quantize vertices, returning their 92 bits format, and their 2^k bits format
 #bits out format : k(4), vertexnb(32), minx(32), miny(32), minz(32), maxx(32), maxy(32), maxz(32), v1(3 * 2^k), v2(3 * 2^k), ... , vn(3 * 2^k)
 #                 |                            HEADER (228 bits)                                 |                  VERTICES                  |
-def quantizeVertices (mesh, k):
+def quantizeVertices(mesh, k):
     vertices = numpy.asarray(mesh.vertices)
     normals = numpy.asarray(mesh.vertex_normals)
+
+    print("vnb @ quantization: " + str(len(vertices)))
 
     ansBits = ''
 
     ansBits += '{0:04b}'.format(k)
     ansBits += '{0:032b}'.format(len(vertices))
+    print("bin : " + ansBits[4:])
 
-    # * * * * * * * * * * 
-    # * * POSITIONS * * * 
-    # * * * * * * * * * * 
+    # * * * * * * * * * *
+    # * * POSITIONS * * *
+    # * * * * * * * * * *
     #Compute AABB
-    min = numpy.array([ 999999.9,  999999.9,  999999.9])
+    min = numpy.array([999999.9, 999999.9, 999999.9])
     max = numpy.array([-999999.9, -999999.9, -999999.9])
 
     for vertex in vertices:
@@ -114,27 +113,45 @@ def quantizeVertices (mesh, k):
         vertex[1] = remap(vertex[1], 0, kpow, min[1], max[1])
         vertex[2] = remap(vertex[2], 0, kpow, min[2], max[2])
 
-    # * * * * * * * * * * 
-    # * * * NORMALS * * * 
-    # * * * * * * * * * * 
+    # * * * * * * * * * *
+    # * * * NORMALS * * *
+    # * * * * * * * * * *
     fibSphere = fibonacci_sphere()
+    pcd = open3d.geometry.PointCloud()
+    pcd.points = open3d.utility.Vector3dVector(fibSphere)    
+    kdFibSphere = open3d.geometry.KDTreeFlann(pcd)
+
     for normal in normals:
-        id = closestNormalID(fibSphere, normal)
+        id = closestNormalID(kdFibSphere, normal)
         normal[0] = fibSphere[id][0]
         normal[1] = fibSphere[id][1]
         normal[2] = fibSphere[id][2]
         ansBits += '{0:017b}'.format(int(id))
-
-    
-    print ("before")
-    print(fibSphere)
-    print(" ")
-    print (normals)
-
-
     return ansBits
 
+
+def printbin(bitstring, start, end, colorstart = 0, colorend = 0, rangevalue = 8):
+    r = 0
+    for i in range(start, end, 32):
+        print(str(i).ljust(8) + ": ", end='')
+        for j in range(0, 32, 8):
+            for k in range(0, 8):
+                if (i+j+k >= start and i+j+k < end):
+                    if (i+j+k >= colorstart and i+j+k < colorend):
+                        print(f"{Code.bcolors.bcolors.OKGREEN}" + bitstring[i+j+k], end='')
+                    else:
+                        if (int(r / rangevalue) % 2 == 0):
+                            print(f"{Code.bcolors.bcolors.OKCYAN}" + bitstring[i+j+k], end='')
+                        else:
+                            print(f"{Code.bcolors.bcolors.OKBLUE}" + bitstring[i+j+k], end='')
+                    r += 1
+            print(' ', end='')
+        print(f"{Code.bcolors.bcolors.ENDC}")
+    print(str(end - 1).ljust(8) + ": END")
+
+
 def readVerticesBits(bitstring):
+    print("bitstring len: " + str(len(bitstring)))
 
     # K
     k = int(bitstring[0:4], 2)
@@ -156,36 +173,51 @@ def readVerticesBits(bitstring):
     min = numpy.array([minx, miny, minz])
     max = numpy.array([maxx, maxy, maxz])
 
+    printbin(bitstring, 0, 4)
+    printbin(bitstring, 4, 228)
+
     # Vertices
-    n = 228
+    n = headerSize
     kpow = pow(2, k) - 1
     vertices = numpy.zeros([vertexCount, 3])
+
+    printbin(bitstring, n, n + (12*k), n, n + 3 * k, k)
+    print ('...')
     for i in range(vertexCount):
-        x = int(bitstring[n:n+k], 2)
+        x = int(bitstring[n:n + k], 2)
         n += k
-        y = int(bitstring[n:n+k], 2)
+        y = int(bitstring[n:n + k], 2)
         n += k
-        z = int(bitstring[n:n+k], 2)
+        z = int(bitstring[n:n + k], 2)
         n += k
-        vertex = numpy.array([remap(x, 0, kpow, min[0], max[0]), remap(y, 0, kpow, min[1], max[1]), remap(z, 0, kpow, min[2], max[2])])
+        vertex = numpy.array([
+            remap(x, 0, kpow, min[0], max[0]),
+            remap(y, 0, kpow, min[1], max[1]),
+            remap(z, 0, kpow, min[2], max[2])
+        ])
         vertices[i] = vertex
+    printbin(bitstring, n - (12 * k), n, n - 3 * k, n, k)
+
+
+
 
     # Normals
-    n = 228 + (k * 3 * vertexCount)
     fibSphere = fibonacci_sphere()
     kn = 17
     normals = numpy.zeros([vertexCount, 3])
+    printbin(bitstring, n, n + (kn * 10), n, n + kn, 17)
+    print ('...')
     for i in range(vertexCount):
 
-        x = int(bitstring[n:n+kn], 2)
+        #print(bitstring[n:n + kn])
+        x = int(bitstring[n:n + kn], 2)
         n += kn
 
-        normals[i] = fibSphere[x]
+        if (x <= 100): #Errors here !
+            normals[i] = fibSphere[x]
 
-    print ("after")
-    print(fibSphere)
-    print(" ")
-    print (normals)
+    printbin(bitstring, n - (kn * 10), n, n - kn, n, 17)
 
+    
     return vertices, normals
 
