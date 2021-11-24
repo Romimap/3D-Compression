@@ -183,14 +183,9 @@ def printMeshInfo():
 # Other functions
 # ------------------------------------------------------------
 
+# Initialize the data used by EdgeBreaker
 def initData():
 	global _marked, _flagged, _missingTrianglesCount
-
-	# # Vertices and opposite corners
-	# halfEdgeCount = len(_heMesh.half_edges)
-	# for halfEdgeId in range(halfEdgeCount):
-	# 	_vertices.append(getVertexId(halfEdgeId))
-	# 	_oppositeCorners.append(getOppositeCornerHeId(halfEdgeId))
 
 	# Marks and flags
 	_marked = [False] * len(_heMesh.vertices) 		# Marks: if a vertex has been visited or not
@@ -202,64 +197,41 @@ def initData():
 		if halfEdge.twin == -1:
 			_marked[halfEdge.vertex_indices[0]] = True
 			_marked[halfEdge.vertex_indices[1]] = True
-			
-	print("End of initData()")
 
 
-
-# PROCEDURE initCompression (c){
-#     GLOBAL M[]={0...}, U[]={0...};              # init tables for marking visited vertices and triangles
-#     WRITE(delta, c.p.v.g);                      # store first vertex as a point
-#     WRITE(delta, c.v.g – c.p.v.g);              # store second vertex as a difference vector with first
-#     WRITE(delta, c.n.v.g – c.v.g);              # store third vertex as a difference vector with second
-#     M[c.v] = 1;  M[c.n.v] = 1; M[c.p.v] = 1;    # mark these 3 vertices
-#     U[c.t] = 1;                                 # paint the triangle and go to opposite corner
-#     Compress (c.o); }                           # start the compression process
+# Initialize the EdgeBreaker algorithm by choosing the best fitting starting vertex in the first mesh's triangle
 def initCompression():
 	global _halfEdgeId, _triangleId, _clers, _deltas
 
-	initData()	# GLOBAL M[]={0...}, U[]={0...} + V & O initialization from _heMesh
+	initData()
 
 	# Try to find a 'C' or an 'S' configuration by rotating the first vertex in the current triangle
+	# If not possible, try to find an 'R' or an 'L' configuration with the same method
 	for i in range(6):
-		print(str(i) + " (He id) left: " + str(getLeftCornerHeId(_halfEdgeId)) + ", right: " + str(getRightCornerHeId(_halfEdgeId)))
-		print(str(i) + " (Vertex id) left: " + str(getLeftVertexId(_halfEdgeId)) + ", right: " + str(getRightVertexId(_halfEdgeId)))
-		if i < 3:
+		if i < 3:	# Search fo 'C' or 'S' configurations
 			if getLeftCornerHeId(_halfEdgeId) != -1 and getRightCornerHeId(_halfEdgeId) != -1:
 				if isMarked(_halfEdgeId):
-					print(str(i) + " found an S configuration")
-					break
+					break	# Found an S configuration
 				else:
-					print(str(i) + " found an C configuration")
-					break
-		else:
+					break	# Found a C configuration
+		else:		# Search fo 'R' or 'L' configurations
 			if getLeftCornerHeId(_halfEdgeId) != -1:
-				print(str(i) + " found an R configuration")
-				break
+				break		# Found an R configuration
 			if getRightCornerHeId(_halfEdgeId) != -1:
-				print(str(i) + " found an L configuration")
-				break
-		print(str(i) + " turn")
+				break		# Found an L configuration
 		_halfEdgeId = getNextHeId(_halfEdgeId)
-		if i == 5:
-			print(str(i) + " found an E configuration")
 
 	# First vertex position
-	_deltas.append(getVertexPosFromHeId(getPreviousHeId(_halfEdgeId))) 					# WRITE(delta, c.p.v.g)
+	_deltas.append(getVertexPosFromHeId(getPreviousHeId(_halfEdgeId)))
 	# Vector from first to second vertex
-	_deltas.append(getDistanceVectorFromHeId(getPreviousHeId(_halfEdgeId), _halfEdgeId)) # WRITE(delta, c.v.g – c.p.v.g)
+	_deltas.append(getDistanceVectorFromHeId(getPreviousHeId(_halfEdgeId), _halfEdgeId))
 	# Vector from second to third vertex
-	_deltas.append(getDistanceVectorFromHeId(_halfEdgeId, getNextHeId(_halfEdgeId))) 	# WRITE(delta, c.n.v.g – c.v.g)
+	_deltas.append(getDistanceVectorFromHeId(_halfEdgeId, getNextHeId(_halfEdgeId)))
 
 	# Mark these vertices as "seen"
-	mark(_halfEdgeId)					# M[c.v] = 1
-	mark(getNextHeId(_halfEdgeId))		# M[c.n.v] = 1
-	mark(getPreviousHeId(_halfEdgeId))	# M[c.p.v] = 1
-
-	# Flag the triangle as "seen"
-	flag(_halfEdgeId)	# U[c.t] = 1
-
-	print("End of initCompression()")
+	mark(_halfEdgeId)
+	mark(getNextHeId(_halfEdgeId))
+	mark(getPreviousHeId(_halfEdgeId))
 
 
 # ------------------------------------------------------------
@@ -270,7 +242,7 @@ def main():
 	global _heMesh
 
 	print("Running MAIN from EdgeBreaker.py")
-	mesh = open3d.io.read_triangle_mesh("Models/triangle.obj")
+	mesh = open3d.io.read_triangle_mesh("Models/simple_shape.obj")
 	_heMesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(mesh)
 	
 	initCompression()
