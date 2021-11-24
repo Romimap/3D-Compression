@@ -16,6 +16,14 @@ from pstats import Stats, SortKey
 
 k = 10
 
+def objExporter(mesh):
+	for v in mesh.vertices:
+		print("v " + "%.4f".format(v[0]) + " " + "%.4f".format(v[1]) + " " + "%.4f".format(v[2]))
+	for n in mesh.vertex_normals:
+		print("vn " + "%.4f".format(n[0]) + " " + "%.4f".format(n[1]) + " " + "%.4f".format(n[2]))
+	for f in mesh.triangles:
+		print("f " + str(f[0]) + "//" + str(f[0]) + " " + str(f[1]) + "//" + str(f[1]) + " " + str(f[2]) + "//" + str(f[2]))
+
 def testFunction():
 	print("Testing IO for meshes ...")
 	mesh = open3d.io.read_triangle_mesh("Models/suzanne.obj")
@@ -29,6 +37,8 @@ def testFunction():
 	meshUnxorifiedBad = copy.deepcopy(mesh)
 
 	xoffset = meshQuantified.get_axis_aligned_bounding_box().get_extent()[0] * 1.2
+	yoffset = meshQuantified.get_axis_aligned_bounding_box().get_extent()[0] * 1.2
+
 	
 	print("DEFAULT")
 
@@ -37,10 +47,10 @@ def testFunction():
 	vertices, normals = readVerticesBits(bitstring)
 	meshQuantified.vertices = open3d.utility.Vector3dVector(vertices)
 	meshQuantified.vertex_normals = open3d.utility.Vector3dVector(normals)
-	meshQuantified.compute_vertex_normals()
+	#meshQuantified.compute_vertex_normals()
 	meshQuantified.translate((1 * xoffset, 0, 0))
 
-	open3d.io.write_triangle_mesh ("default.obj", meshQuantified)
+	objExporter (meshQuantified)
 
 	print("\nSCRAMBLED\n")
 
@@ -49,8 +59,8 @@ def testFunction():
 	vertices, normals = readVerticesBits(bitstringScrambled)
 	meshScrambled.vertices = open3d.utility.Vector3dVector(vertices)
 	meshScrambled.vertex_normals = open3d.utility.Vector3dVector(normals)
-	meshScrambled.compute_vertex_normals()
-	meshScrambled.translate((2 * xoffset, 0, 0))
+	#meshScrambled.compute_vertex_normals()
+	meshScrambled.translate((0 * xoffset, -1 * yoffset, 0))
 
 	open3d.io.write_triangle_mesh ("scrambled.obj", meshScrambled)
 
@@ -62,8 +72,8 @@ def testFunction():
 	vertices, normals = readVerticesBits(bitstringUnscrambledOk)
 	meshUnscrambledOk.vertices = open3d.utility.Vector3dVector(vertices)
 	meshUnscrambledOk.vertex_normals = open3d.utility.Vector3dVector(normals)
-	meshUnscrambledOk.compute_vertex_normals()
-	meshUnscrambledOk.translate((3 * xoffset, 0, 0))
+	#meshUnscrambledOk.compute_vertex_normals()
+	meshUnscrambledOk.translate((1 * xoffset, -1 * yoffset, 0))
 
 	open3d.io.write_triangle_mesh ("unscrambled.obj", meshUnscrambledOk)
 
@@ -75,8 +85,8 @@ def testFunction():
 	vertices, normals = readVerticesBits(bitstringUnscrambledBad)
 	meshUnscrambledBad.vertices = open3d.utility.Vector3dVector(vertices)
 	meshUnscrambledBad.vertex_normals = open3d.utility.Vector3dVector(normals)
-	meshUnscrambledBad.compute_vertex_normals()
-	meshUnscrambledBad.translate((4 * xoffset, 0, 0))
+	#meshUnscrambledBad.compute_vertex_normals()
+	meshUnscrambledBad.translate((2 * xoffset, -1 * yoffset, 0))
 
 	print("\nXORIFY\n")
 
@@ -85,8 +95,8 @@ def testFunction():
 	vertices, normals = readVerticesBits(bitstringXorified)
 	meshXorified.vertices = open3d.utility.Vector3dVector(vertices)
 	meshXorified.vertex_normals = open3d.utility.Vector3dVector(normals)
-	meshXorified.compute_vertex_normals()
-	meshXorified.translate((5 * xoffset, 0, 0))
+	#meshXorified.compute_vertex_normals()
+	meshXorified.translate((0 * xoffset, -2 * yoffset, 0))
 
 	open3d.io.write_triangle_mesh ("xorified.obj", meshXorified)
 
@@ -98,8 +108,8 @@ def testFunction():
 	vertices, normals = readVerticesBits(bitstringUnorifiedOk)
 	meshUnxorifiedOk.vertices = open3d.utility.Vector3dVector(vertices)
 	meshUnxorifiedOk.vertex_normals = open3d.utility.Vector3dVector(normals)
-	meshUnxorifiedOk.compute_vertex_normals()
-	meshUnxorifiedOk.translate((6 * xoffset, 0, 0))
+	#meshUnxorifiedOk.compute_vertex_normals()
+	meshUnxorifiedOk.translate((1 * xoffset, -2 * yoffset , 0))
 
 	open3d.io.write_triangle_mesh ("unxorified.obj", meshUnxorifiedOk)
 
@@ -110,8 +120,8 @@ def testFunction():
 	vertices, normals = readVerticesBits(bitstringUnorifiedBad)
 	meshUnxorifiedBad.vertices = open3d.utility.Vector3dVector(vertices)
 	meshUnxorifiedBad.vertex_normals = open3d.utility.Vector3dVector(normals)
-	meshUnxorifiedBad.compute_vertex_normals()
-	meshUnxorifiedBad.translate((7 * xoffset, 0, 0))
+	#meshUnxorifiedBad.compute_vertex_normals()
+	meshUnxorifiedBad.translate((2 * xoffset, -2 * yoffset, 0))
 
 	bitArray = bitarray.bitarray([0 for _ in range(8-(len(bitstring)%8))] + list(map(int,bitstring)))
 	with open("bits","wb+") as f:
@@ -123,6 +133,7 @@ def testFunction():
 def main():
 	print("Hello world")
 	os.system("rm -rf ./out")
+	os.system("mkdir out")
 	testFunction()
 	os.system("mv *.obj ./out")
 	os.system("mv *.mtl ./out")

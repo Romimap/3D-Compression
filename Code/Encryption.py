@@ -20,8 +20,6 @@ def xorifyNormals (bitstring, k, key):
     return "".join(bitstring)
 
 
-
-
 def gettransposition(key, vertexNb):
     random.seed(key + SALTPOS)
     transpositionsX = []

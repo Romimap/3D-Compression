@@ -1,67 +1,68 @@
-         5521317 function calls in 6.088 seconds
+         5521321 function calls in 9.354 seconds
 
    Ordered by: internal time
 
    ncalls  tottime  percall  cumtime  percall filename:lineno(function)
-        1    2.871    2.871    2.871    2.871 {built-in method open3d.cpu.pybind.visualization.draw_geometries}
-        8    1.529    0.191    2.608    0.326 Quantization.py:28(fibonacci_sphere)
-  1068920    0.778    0.000    0.778    0.000 {built-in method numpy.array}
-  1048576    0.119    0.000    0.119    0.000 {built-in method math.cos}
-  1048576    0.100    0.000    0.100    0.000 {built-in method math.sin}
-  1048584    0.094    0.000    0.094    0.000 {built-in method math.sqrt}
-   200376    0.088    0.000    0.205    0.000 random.py:200(randrange)
-   200376    0.078    0.000    0.117    0.000 random.py:250(_randbelow_with_getrandbits)
-        7    0.057    0.008    2.388    0.341 Quantization.py:153(readVerticesBits)
-        1    0.057    0.057    0.421    0.421 Quantization.py:57(quantizeVertices)
-        3    0.055    0.018    0.121    0.040 Encryption.py:25(gettransposition)
-        3    0.053    0.018    0.245    0.082 Encryption.py:9(xorifyNormals)
-   200376    0.049    0.000    0.253    0.000 random.py:244(randint)
-    78408    0.033    0.000    0.033    0.000 Quantization.py:50(remap)
-   369794    0.026    0.000    0.026    0.000 {method 'getrandbits' of '_random.Random' objects}
-        1    0.015    0.015    6.088    6.088 main.py:19(testFunction)
-     2904    0.013    0.000    0.013    0.000 Quantization.py:46(closestNormalID)
-   200376    0.013    0.000    0.013    0.000 {method 'bit_length' of 'int' objects}
+        1    5.579    5.579    5.579    5.579 {built-in method open3d.cpu.pybind.visualization.draw_geometries}
+        8    1.685    0.211    2.826    0.353 Quantization.py:28(fibonacci_sphere)
+  1068920    0.831    0.000    0.831    0.000 {built-in method numpy.array}
+        5    0.237    0.047    0.237    0.047 {built-in method open3d.cpu.pybind.io.write_triangle_mesh}
+  1048576    0.114    0.000    0.114    0.000 {built-in method math.cos}
+  1048576    0.108    0.000    0.108    0.000 {built-in method math.sin}
+   200376    0.102    0.000    0.234    0.000 random.py:200(randrange)
+  1048584    0.100    0.000    0.100    0.000 {built-in method math.sqrt}
+   200376    0.090    0.000    0.132    0.000 random.py:250(_randbelow_with_getrandbits)
+        1    0.064    0.064    0.437    0.437 Quantization.py:57(quantizeVertices)
+        3    0.063    0.021    0.283    0.094 Encryption.py:9(xorifyNormals)
+        7    0.062    0.009    2.610    0.373 Quantization.py:153(readVerticesBits)
+   200376    0.058    0.000    0.292    0.000 random.py:244(randint)
+        3    0.058    0.019    0.135    0.045 Encryption.py:25(gettransposition)
+    78408    0.037    0.000    0.037    0.000 Quantization.py:50(remap)
+   369794    0.027    0.000    0.027    0.000 {method 'getrandbits' of '_random.Random' objects}
+        4    0.022    0.005    0.022    0.005 {built-in method posix.system}
+        1    0.017    0.017    0.017    0.017 {built-in method open3d.cpu.pybind.io.read_triangle_mesh}
+     2904    0.016    0.000    0.016    0.000 Quantization.py:46(closestNormalID)
+        1    0.016    0.016    9.332    9.332 main.py:19(testFunction)
+   200376    0.015    0.000    0.015    0.000 {method 'bit_length' of 'int' objects}
      8712    0.012    0.000    0.012    0.000 {built-in method builtins.round}
-        1    0.012    0.012    0.012    0.012 {built-in method open3d.cpu.pybind.io.read_triangle_mesh}
-        2    0.008    0.004    0.065    0.032 Encryption.py:80(unscramble)
-       42    0.005    0.000    0.009    0.000 Quantization.py:133(printbin)
-     6921    0.004    0.000    0.004    0.000 {built-in method builtins.print}
+        2    0.011    0.005    0.075    0.038 Encryption.py:80(unscramble)
+       42    0.006    0.000    0.010    0.000 Quantization.py:133(printbin)
+     6921    0.005    0.000    0.005    0.000 {built-in method builtins.print}
     11618    0.004    0.000    0.004    0.000 {method 'format' of 'str' objects}
-        1    0.004    0.004    0.071    0.071 Encryption.py:41(scramble)
-       22    0.003    0.000    0.003    0.000 {built-in method numpy.zeros}
+       22    0.004    0.000    0.004    0.000 {built-in method numpy.zeros}
+        1    0.003    0.003    0.076    0.076 Encryption.py:41(scramble)
     26136    0.002    0.000    0.002    0.000 {method 'append' of 'list' objects}
         3    0.002    0.001    0.002    0.001 {method 'join' of 'str' objects}
-        9    0.001    0.000    0.001    0.000 {built-in method builtins.min}
-        9    0.001    0.000    0.001    0.000 {built-in method builtins.max}
+        9    0.002    0.000    0.002    0.000 {built-in method builtins.min}
         7    0.001    0.000    0.001    0.000 copy.py:128(deepcopy)
-        5    0.000    0.000    0.000    0.000 {built-in method open3d.cpu.pybind.io.write_triangle_mesh}
+        9    0.001    0.000    0.001    0.000 {built-in method builtins.max}
         1    0.000    0.000    0.000    0.000 {built-in method io.open}
-        1    0.000    0.000    6.088    6.088 main.py:122(main)
+        1    0.000    0.000    9.354    9.354 main.py:125(main)
         6    0.000    0.000    0.000    0.000 random.py:123(seed)
       238    0.000    0.000    0.000    0.000 {method 'ljust' of 'str' objects}
+        6    0.000    0.000    0.000    0.000 {function Random.seed at 0x7f8be3b12790}
         1    0.000    0.000    0.000    0.000 {method 'tofile' of 'bitarray.bitarray' objects}
        42    0.000    0.000    0.000    0.000 Quantization.py:22(bin_to_float)
-        6    0.000    0.000    0.000    0.000 {function Random.seed at 0x7f75fede5790}
        48    0.000    0.000    0.000    0.000 {built-in method _struct.pack}
-        2    0.000    0.000    0.000    0.000 {built-in method numpy.asarray}
-        6    0.000    0.000    0.000    0.000 {method 'digest' of '_sha512.sha512' objects}
-       25    0.000    0.000    0.000    0.000 {built-in method builtins.len}
-        1    0.000    0.000    0.000    0.000 cProfile.py:133(__exit__)
         6    0.000    0.000    0.000    0.000 Quantization.py:17(float_to_bin)
-       48    0.000    0.000    0.000    0.000 {built-in method _struct.unpack}
         7    0.000    0.000    0.000    0.000 copy.py:242(_keep_alive)
+        6    0.000    0.000    0.000    0.000 {method 'digest' of '_sha512.sha512' objects}
+       48    0.000    0.000    0.000    0.000 {built-in method _struct.unpack}
+       25    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+        2    0.000    0.000    0.000    0.000 {built-in method numpy.asarray}
+        1    0.000    0.000    0.000    0.000 cProfile.py:133(__exit__)
         8    0.000    0.000    0.000    0.000 {built-in method builtins.pow}
-        6    0.000    0.000    0.000    0.000 {built-in method _sha512.sha512}
         6    0.000    0.000    0.000    0.000 {built-in method from_bytes}
-       21    0.000    0.000    0.000    0.000 {built-in method builtins.id}
+        6    0.000    0.000    0.000    0.000 {built-in method _sha512.sha512}
        14    0.000    0.000    0.000    0.000 {method 'get' of 'dict' objects}
-       12    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+       21    0.000    0.000    0.000    0.000 {built-in method builtins.id}
         6    0.000    0.000    0.000    0.000 {method 'encode' of 'str' objects}
+       12    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
         6    0.000    0.000    0.000    0.000 {built-in method builtins.bin}
+        6    0.000    0.000    0.000    0.000 {method 'zfill' of 'str' objects}
         7    0.000    0.000    0.000    0.000 {built-in method builtins.getattr}
         7    0.000    0.000    0.000    0.000 {built-in method builtins.issubclass}
-        6    0.000    0.000    0.000    0.000 {method 'zfill' of 'str' objects}
         1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
-        1    0.000    0.000    0.000    0.000 main.py:116(<listcomp>)
+        1    0.000    0.000    0.000    0.000 main.py:118(<listcomp>)
 
 
