@@ -1,0 +1,5 @@
+# A single triangle
+v 1 1 1
+v 0 0 1
+v 2 0 1
+f 1 2 3
