@@ -110,6 +110,14 @@ def getRightCornerHeId(halfEdgeId):
 	return getPreviousHeId(getTwinHeId(getPreviousHeId(halfEdgeId)))
 
 
+## TRIANGLES
+
+def getTriangleFromHeId(halfEdgeId):
+	if halfEdgeId == -1:
+		return -1
+	return _heMesh.half_edges[halfEdgeId].triangle_index
+
+
 ## DISTANCE VECTORS
 
 def getDistanceVectorFromVerticesId(fromVertexId, toVertexId):
@@ -145,7 +153,7 @@ def isMarked(halfEdgeId):
 	global _marked
 
 	if halfEdgeId == -1:
-		return False
+		return True
 	else:
 		return _marked[getVertexId(halfEdgeId)]
 
@@ -154,18 +162,16 @@ def flag(halfEdgeId):
 	global _flagged
 
 	if halfEdgeId != -1:
-		triangleId = _heMesh.half_edges[halfEdgeId].triangle_index
-		_flagged[triangleId] = True
+		_flagged[getTriangleFromHeId(halfEdgeId)] = True
 
 
 def isFlagged(halfEdgeId):
 	global _flagged
 	
 	if halfEdgeId == -1:
-		return False
+		return True
 	else:
-		triangleId = _heMesh.half_edges[halfEdgeId].triangle_index
-		return _flagged[triangleId]
+		return _flagged[getTriangleFromHeId(halfEdgeId)]
 
 
 # ------------------------------------------------------------
@@ -211,14 +217,14 @@ def initCompression():
 		if i < 3:	# Search fo 'C' or 'S' configurations
 			if getLeftCornerHeId(_halfEdgeId) != -1 and getRightCornerHeId(_halfEdgeId) != -1:
 				if isMarked(_halfEdgeId):
-					break	# Found an S configuration
+					break	# Found an 'S' configuration
 				else:
-					break	# Found a C configuration
+					break	# Found a 'C' configuration
 		else:		# Search fo 'R' or 'L' configurations
 			if getLeftCornerHeId(_halfEdgeId) != -1:
-				break		# Found an R configuration
+				break		# Found an 'R' configuration
 			if getRightCornerHeId(_halfEdgeId) != -1:
-				break		# Found an L configuration
+				break		# Found an 'L' configuration
 		_halfEdgeId = getNextHeId(_halfEdgeId)
 
 	# First vertex position
@@ -234,6 +240,55 @@ def initCompression():
 	mark(getPreviousHeId(_halfEdgeId))
 
 
+def compress(halfEdgeId):
+	global _triangleId, _deltas, _clers
+
+	while True:
+		if halfEdgeId == -1:
+			return
+
+		print()
+		print(f'Current he id: {halfEdgeId}')
+		print(f'Current vertex id: {getVertexId(halfEdgeId)}')
+		print(f'Marks: {_marked}')
+		print(f'Flags: {_flagged}')
+
+		_triangleId = getTriangleFromHeId(halfEdgeId)
+		flag(_triangleId)
+
+		if not isMarked(halfEdgeId):							# 'C' configuration
+			print("Found C configuration")
+			# Append correction vector
+			_deltas.append(getVertexPosFromHeId(halfEdgeId)								# Current
+							- getVertexPosFromHeId(getPreviousHeId(halfEdgeId))			# Previous
+							- getVertexPosFromHeId(getNextHeId(halfEdgeId))				# Next
+							+ getVertexPosFromHeId(getOppositeCornerHeId(halfEdgeId)))	# Opposite
+			_clers += 'C'
+			mark(halfEdgeId)
+			halfEdgeId = getRightCornerHeId(halfEdgeId)
+		else:
+
+			if isFlagged(getRightCornerHeId(halfEdgeId)):	# isFlagged(i) == i triangle already seen
+				if isFlagged(getLeftCornerHeId(halfEdgeId)):	# 'E' configuration
+					print("Found E configuration")
+					_clers += 'E'
+					return
+				else:											# 'R' configuration
+					print("Found R configuration")
+					_clers += 'R'
+					halfEdgeId = getLeftCornerHeId(halfEdgeId)
+			else:
+				if isFlagged(getLeftCornerHeId(halfEdgeId)):	# 'L' configuration
+					print("Found L configuration")
+					_clers += 'L'
+					halfEdgeId = getRightCornerHeId(halfEdgeId)
+				else:											# 'S' configuration
+					print("Found S configuration")
+					_clers += 'S'
+					compress(getRightCornerHeId(halfEdgeId))	# Create a branch for the right triangles
+					halfEdgeId = getLeftCornerHeId(halfEdgeId)	# When the right triangles are done, continue with the left triangles
+
+
 # ------------------------------------------------------------
 # Main
 # ------------------------------------------------------------
@@ -242,14 +297,20 @@ def main():
 	global _heMesh
 
 	print("Running MAIN from EdgeBreaker.py")
-	mesh = open3d.io.read_triangle_mesh("Models/simple_shape.obj")
+	mesh = open3d.io.read_triangle_mesh("Models/complex_shape.obj")
 	_heMesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(mesh)
 	
 	initCompression()
+	compress(_halfEdgeId)
 
-	# open3d.visualization.draw_geometries([_heMesh])
-	# print(numpy.asarray(_heMesh.triangles))
-	# print(numpy.asarray(_heMesh.half_edges))
+	print(f'CLERS = {_clers}')
+	print("Deltas:")
+	for v in _deltas:
+		print(v)
+
+	open3d.visualization.draw_geometries([_heMesh])
+	print(numpy.asarray(_heMesh.triangles))
+	print(numpy.asarray(_heMesh.half_edges))
 
 	return 0
 
