@@ -2,8 +2,28 @@ import random
 
 from Code.Quantization import headerSize
 
+SALTPOS = "salty"
+SALTNRM = "salty"
+
+
+def xorifyNormals (bitstring, k, key):
+    random.seed(key + SALTNRM)
+    vertexNb = int(bitstring[4:36], 2)
+    bitstring = list(bitstring)
+    startindex = headerSize + (3 * k * vertexNb)
+    for k in range(startindex, len(bitstring)):
+        if int(bitstring[k]) == random.randint(0, 1):
+            bitstring[k] = '0'
+        else:
+            bitstring[k] = '1'
+
+    return "".join(bitstring)
+
+
+
+
 def gettransposition(key, vertexNb):
-    random.seed(key)
+    random.seed(key + SALTPOS)
     transpositionsX = []
     transpositionsY = []
     transpositionsZ = []
@@ -17,7 +37,6 @@ def gettransposition(key, vertexNb):
             (random.randint(0, vertexNb - 1), random.randint(0, vertexNb - 1)))
 
     return transpositionsX, transpositionsY, transpositionsZ
-
 
 def scramble(bitstring, k, key):
     vertexNb = int(bitstring[4:36], 2)
