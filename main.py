@@ -1,10 +1,12 @@
 import builtins
 import sys
 import os
+import numpy
 import open3d
 import bitarray
 import Code
 import copy
+import math
 
 from Code.Quantization import quantizeVertices
 from Code.Quantization import readVerticesBits
@@ -16,18 +18,99 @@ from pstats import Stats, SortKey
 
 k = 10
 
-def objExporter(mesh):
+def interpolate (A, B, C):
+	n = A + B + C
+	l = numpy.sqrt(pow(n[0], 2) + pow(n[1], 2) + pow(n[2], 2))
+	return n / l
+
+
+def objImporter(filepath):
+	vertexIdDict = {} #Used to check if a vertex already exists
+	
+	#Positions & normals from the .obj
+	positions = []
+	normals = []
+
+	#Vertices & Vertex Normals from the mesh
+	vertices = []
+	vertexNormals = []
+	triangles = []
+	triangleNormals = []
+
+	with open(filepath) as file:
+		for line in file:
+			line = line.rstrip()
+			value = line.split(" ")
+			if value[0] == "v":
+				x, y, z = float(value[1]), float(value[2]), float(value[3])
+				positions.append(numpy.array([x, y, z]))
+			if value[0] == "vn":
+				x, y, z = float(value[1]), float(value[2]), float(value[3])
+				normals.append(numpy.array([x, y, z]))
+			if value[0] == "f":
+				if value[1] not in vertexIdDict:
+					id = len(vertices)
+					vid = int(value[1].split("/")[0]) - 1
+					nid = int(value[1].split("/")[2]) - 1
+					vertices.append(positions[vid])
+					vertexNormals.append(normals[nid])
+					vertexIdDict[value[1]] = id
+				A = vertexIdDict[value[1]]
+
+				if value[2] not in vertexIdDict:
+					id = len(vertices)
+					vid = int(value[2].split("/")[0]) - 1
+					nid = int(value[2].split("/")[2]) - 1
+					vertices.append(positions[vid])
+					vertexNormals.append(normals[nid])
+					vertexIdDict[value[2]] = id
+				B = vertexIdDict[value[2]]
+				if value[3] not in vertexIdDict:
+					id = len(vertices)
+					vid = int(value[3].split("/")[0]) - 1
+					nid = int(value[3].split("/")[2]) - 1
+					vertices.append(positions[vid])
+					vertexNormals.append(normals[nid])
+					vertexIdDict[value[3]] = id
+				C = vertexIdDict[value[3]]
+				triangles.append(numpy.array([A, B, C]))
+				triangleNormals.append(interpolate(vertexNormals[A], vertexNormals[B], vertexNormals[C]))
+
+	mesh = open3d.geometry.TriangleMesh.create_sphere()
+	mesh.vertices = open3d.utility.Vector3dVector(vertices)
+	mesh.vertex_normals = open3d.utility.Vector3dVector(vertexNormals)
+	mesh.triangles = open3d.utility.Vector3iVector(triangles)
+	mesh.compute_triangle_normals()
+	print(numpy.asarray(mesh.triangle_normals))
+	print(triangleNormals)
+	print(numpy.asarray(open3d.utility.Vector3dVector(triangleNormals)))
+	mesh.triangle_normals = open3d.utility.Vector3dVector(triangleNormals)
+
+
+	print(numpy.asarray(mesh.vertices))
+	print(numpy.asarray(mesh.vertex_normals))
+	print(numpy.asarray(mesh.triangles))
+
+	#open3d.visualization.draw_geometries([mesh])
+
+	return mesh
+				
+def objExporter(filepath, mesh):
+	os.system('rm ' + filepath)
+	file = open(filepath, "a")
 	for v in mesh.vertices:
-		print("v " + "%.4f".format(v[0]) + " " + "%.4f".format(v[1]) + " " + "%.4f".format(v[2]))
+		file.write("v " + "{:.4f}".format(v[0]) + " " + "{:.4f}".format(v[1]) + " " + "{:.4f}".format(v[2]) + "\n")
 	for n in mesh.vertex_normals:
-		print("vn " + "%.4f".format(n[0]) + " " + "%.4f".format(n[1]) + " " + "%.4f".format(n[2]))
+		file.write("vn " + "{:.4f}".format(n[0]) + " " + "{:.4f}".format(n[1]) + " " + "{:.4f}".format(n[2]) + "\n")
 	for f in mesh.triangles:
-		print("f " + str(f[0]) + "//" + str(f[0]) + " " + str(f[1]) + "//" + str(f[1]) + " " + str(f[2]) + "//" + str(f[2]))
+		file.write("f " + str(f[0]+1) + "//" + str(f[0]+1) + " " + str(f[1]+1) + "//" + str(f[1]+1) + " " + str(f[2]+1) + "//" + str(f[2]+1) + "\n")
 
 def testFunction():
 	print("Testing IO for meshes ...")
-	mesh = open3d.io.read_triangle_mesh("Models/suzanne.obj")
-	mesh.compute_vertex_normals()
+	#mesh = open3d.io.read_triangle_mesh("Models/suzanne.obj")
+	mesh = objImporter("./Models/Sphere.obj")
+	#mesh.compute_vertex_normals()
+	#mesh.compute_triangle_normals()
 	meshQuantified = copy.deepcopy(mesh)
 	meshScrambled = copy.deepcopy(mesh)
 	meshUnscrambledOk = copy.deepcopy(mesh)
@@ -45,12 +128,10 @@ def testFunction():
 	bitstring = quantizeVertices(meshQuantified, k)
 
 	vertices, normals = readVerticesBits(bitstring)
+
 	meshQuantified.vertices = open3d.utility.Vector3dVector(vertices)
 	meshQuantified.vertex_normals = open3d.utility.Vector3dVector(normals)
-	#meshQuantified.compute_vertex_normals()
 	meshQuantified.translate((1 * xoffset, 0, 0))
-
-	objExporter (meshQuantified)
 
 	print("\nSCRAMBLED\n")
 
@@ -59,10 +140,9 @@ def testFunction():
 	vertices, normals = readVerticesBits(bitstringScrambled)
 	meshScrambled.vertices = open3d.utility.Vector3dVector(vertices)
 	meshScrambled.vertex_normals = open3d.utility.Vector3dVector(normals)
-	#meshScrambled.compute_vertex_normals()
 	meshScrambled.translate((0 * xoffset, -1 * yoffset, 0))
 
-	open3d.io.write_triangle_mesh ("scrambled.obj", meshScrambled)
+	objExporter ("scrambled.obj", meshScrambled)
 
 
 	print("\nUNSCRAMBLED OK\n")
@@ -72,10 +152,9 @@ def testFunction():
 	vertices, normals = readVerticesBits(bitstringUnscrambledOk)
 	meshUnscrambledOk.vertices = open3d.utility.Vector3dVector(vertices)
 	meshUnscrambledOk.vertex_normals = open3d.utility.Vector3dVector(normals)
-	#meshUnscrambledOk.compute_vertex_normals()
 	meshUnscrambledOk.translate((1 * xoffset, -1 * yoffset, 0))
 
-	open3d.io.write_triangle_mesh ("unscrambled.obj", meshUnscrambledOk)
+	objExporter ("unscrambled.obj", meshUnscrambledOk)
 
 
 	print("\nUNSCRAMBLED BAD\n")
@@ -85,7 +164,6 @@ def testFunction():
 	vertices, normals = readVerticesBits(bitstringUnscrambledBad)
 	meshUnscrambledBad.vertices = open3d.utility.Vector3dVector(vertices)
 	meshUnscrambledBad.vertex_normals = open3d.utility.Vector3dVector(normals)
-	#meshUnscrambledBad.compute_vertex_normals()
 	meshUnscrambledBad.translate((2 * xoffset, -1 * yoffset, 0))
 
 	print("\nXORIFY\n")
@@ -95,10 +173,9 @@ def testFunction():
 	vertices, normals = readVerticesBits(bitstringXorified)
 	meshXorified.vertices = open3d.utility.Vector3dVector(vertices)
 	meshXorified.vertex_normals = open3d.utility.Vector3dVector(normals)
-	#meshXorified.compute_vertex_normals()
 	meshXorified.translate((0 * xoffset, -2 * yoffset, 0))
 
-	open3d.io.write_triangle_mesh ("xorified.obj", meshXorified)
+	objExporter ("xorified.obj", meshXorified)
 
 
 	print("\nUNXORIFY OK\n")
@@ -108,10 +185,9 @@ def testFunction():
 	vertices, normals = readVerticesBits(bitstringUnorifiedOk)
 	meshUnxorifiedOk.vertices = open3d.utility.Vector3dVector(vertices)
 	meshUnxorifiedOk.vertex_normals = open3d.utility.Vector3dVector(normals)
-	#meshUnxorifiedOk.compute_vertex_normals()
 	meshUnxorifiedOk.translate((1 * xoffset, -2 * yoffset , 0))
 
-	open3d.io.write_triangle_mesh ("unxorified.obj", meshUnxorifiedOk)
+	objExporter ("unxorified.obj", meshUnxorifiedOk)
 
 	print("\nUNXORIFY BAD\n")
 
@@ -120,7 +196,6 @@ def testFunction():
 	vertices, normals = readVerticesBits(bitstringUnorifiedBad)
 	meshUnxorifiedBad.vertices = open3d.utility.Vector3dVector(vertices)
 	meshUnxorifiedBad.vertex_normals = open3d.utility.Vector3dVector(normals)
-	#meshUnxorifiedBad.compute_vertex_normals()
 	meshUnxorifiedBad.translate((2 * xoffset, -2 * yoffset, 0))
 
 	bitArray = bitarray.bitarray([0 for _ in range(8-(len(bitstring)%8))] + list(map(int,bitstring)))
@@ -130,14 +205,38 @@ def testFunction():
 	open3d.visualization.draw_geometries([mesh, meshQuantified, meshScrambled, meshUnscrambledBad, meshUnscrambledOk, meshXorified, meshUnxorifiedOk, meshUnxorifiedBad])
 
 
+#FOR A FILENAME, RETURNS A BITSTRING THAT CAN BE USED TO WRITE A FILE
+def cryptoCompress(password, filename):
+	bitstring = quantizeVertices(objImporter(filename), k)
+	bitstring = scramble(bitstring, 10, password)
+	bitstring = xorifyNormals(bitstring, 10, password)
+	return bitstring
+
+#FOR A BITSTRING, RETURNS A MESH
+def cryptoExcract(password, bitstring):
+	mesh = objImporter("./Models/Sphere.obj") #NOTE: remove that
+	bitstring = xorifyNormals(bitstring, 10, password)
+	bitstring = unscramble(bitstring, 10, password)
+	vertices, normals = readVerticesBits(bitstring)
+	mesh.vertices = open3d.utility.Vector3dVector(vertices)
+	mesh.vertex_normals = open3d.utility.Vector3dVector(normals)
+	return mesh
+
+#WRITES A FILE FROM A BITSTRING
+def writeFile(bitstring, filename):
+	bitArray = bitarray.bitarray([0 for _ in range(8-(len(bitstring)%8))] + list(map(int,bitstring)))
+	with open(filename,"wb+") as f:
+		bitArray.tofile(f)
+
 def main():
-	print("Hello world")
-	os.system("rm -rf ./out")
-	os.system("mkdir out")
-	testFunction()
-	os.system("mv *.obj ./out")
-	os.system("mv *.mtl ./out")
+	#testFunction()
 	
+	bitstring = cryptoCompress('password', './Models/bunny_normals.obj')
+	writeFile(bitstring, "bunny_normals.rfcp")
+	mesh = cryptoExcract('BADpassword', bitstring)
+
+	open3d.visualization.draw_geometries([mesh])
+
 	return 0
 
 if __name__ == '__main__':

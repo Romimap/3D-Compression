@@ -1,68 +1,138 @@
-         5521321 function calls in 9.354 seconds
+         6396204 function calls (6377180 primitive calls) in 7.500 seconds
 
    Ordered by: internal time
 
    ncalls  tottime  percall  cumtime  percall filename:lineno(function)
-        1    5.579    5.579    5.579    5.579 {built-in method open3d.cpu.pybind.visualization.draw_geometries}
-        8    1.685    0.211    2.826    0.353 Quantization.py:28(fibonacci_sphere)
-  1068920    0.831    0.000    0.831    0.000 {built-in method numpy.array}
-        5    0.237    0.047    0.237    0.047 {built-in method open3d.cpu.pybind.io.write_triangle_mesh}
-  1048576    0.114    0.000    0.114    0.000 {built-in method math.cos}
-  1048576    0.108    0.000    0.108    0.000 {built-in method math.sin}
-   200376    0.102    0.000    0.234    0.000 random.py:200(randrange)
-  1048584    0.100    0.000    0.100    0.000 {built-in method math.sqrt}
-   200376    0.090    0.000    0.132    0.000 random.py:250(_randbelow_with_getrandbits)
-        1    0.064    0.064    0.437    0.437 Quantization.py:57(quantizeVertices)
-        3    0.063    0.021    0.283    0.094 Encryption.py:9(xorifyNormals)
-        7    0.062    0.009    2.610    0.373 Quantization.py:153(readVerticesBits)
-   200376    0.058    0.000    0.292    0.000 random.py:244(randint)
-        3    0.058    0.019    0.135    0.045 Encryption.py:25(gettransposition)
-    78408    0.037    0.000    0.037    0.000 Quantization.py:50(remap)
-   369794    0.027    0.000    0.027    0.000 {method 'getrandbits' of '_random.Random' objects}
-        4    0.022    0.005    0.022    0.005 {built-in method posix.system}
-        1    0.017    0.017    0.017    0.017 {built-in method open3d.cpu.pybind.io.read_triangle_mesh}
-     2904    0.016    0.000    0.016    0.000 Quantization.py:46(closestNormalID)
-        1    0.016    0.016    9.332    9.332 main.py:19(testFunction)
-   200376    0.015    0.000    0.015    0.000 {method 'bit_length' of 'int' objects}
-     8712    0.012    0.000    0.012    0.000 {built-in method builtins.round}
-        2    0.011    0.005    0.075    0.038 Encryption.py:80(unscramble)
-       42    0.006    0.000    0.010    0.000 Quantization.py:133(printbin)
-     6921    0.005    0.000    0.005    0.000 {built-in method builtins.print}
-    11618    0.004    0.000    0.004    0.000 {method 'format' of 'str' objects}
-       22    0.004    0.000    0.004    0.000 {built-in method numpy.zeros}
-        1    0.003    0.003    0.076    0.076 Encryption.py:41(scramble)
-    26136    0.002    0.000    0.002    0.000 {method 'append' of 'list' objects}
-        3    0.002    0.001    0.002    0.001 {method 'join' of 'str' objects}
-        9    0.002    0.000    0.002    0.000 {built-in method builtins.min}
-        7    0.001    0.000    0.001    0.000 copy.py:128(deepcopy)
-        9    0.001    0.000    0.001    0.000 {built-in method builtins.max}
-        1    0.000    0.000    0.000    0.000 {built-in method io.open}
-        1    0.000    0.000    9.354    9.354 main.py:125(main)
-        6    0.000    0.000    0.000    0.000 random.py:123(seed)
-      238    0.000    0.000    0.000    0.000 {method 'ljust' of 'str' objects}
-        6    0.000    0.000    0.000    0.000 {function Random.seed at 0x7f8be3b12790}
+        1    2.253    2.253    2.253    2.253 {built-in method open3d.cpu.pybind.visualization.draw_geometries}
+        2    0.611    0.305    1.020    0.510 Quantization.py:28(fibonacci_sphere)
+   685400    0.480    0.000    1.094    0.000 random.py:200(randrange)
+   685400    0.413    0.000    0.614    0.000 random.py:250(_randbelow_with_getrandbits)
+   292687    0.336    0.000    0.336    0.000 {built-in method numpy.array}
+        2    0.292    0.146    1.345    0.672 Encryption.py:9(xorifyNormals)
+        1    0.290    0.290    1.110    1.110 Quantization.py:57(quantizeVertices)
+   685400    0.279    0.000    1.373    0.000 random.py:244(randint)
+     6256    0.168    0.000    0.504    0.000 arrayprint.py:896(fillFormat)
+        2    0.159    0.079    1.395    0.698 main.py:27(objImporter)
+        2    0.148    0.074    0.490    0.245 Encryption.py:23(gettransposition)
+  1209845    0.129    0.000    0.129    0.000 {method 'getrandbits' of '_random.Random' objects}
+   134100    0.110    0.000    0.110    0.000 Quantization.py:50(remap)
+    14900    0.108    0.000    0.108    0.000 Quantization.py:46(closestNormalID)
+        1    0.101    0.101    0.101    0.101 main.py:226(writeFile)
+    18888    0.092    0.000    0.117    0.000 arrayprint.py:980(__call__)
+25242/6258    0.092    0.000    0.277    0.000 arrayprint.py:751(recurser)
+    44700    0.090    0.000    0.090    0.000 {built-in method builtins.round}
+        1    0.080    0.080    0.637    0.637 Quantization.py:153(readVerticesBits)
+     1009    0.073    0.000    1.109    0.001 {built-in method builtins.print}
+   685400    0.072    0.000    0.072    0.000 {method 'bit_length' of 'int' objects}
+        1    0.059    0.059    0.282    0.282 Encryption.py:78(unscramble)
+     6248    0.058    0.000    0.070    0.000 main.py:21(interpolate)
+        1    0.054    0.054    0.347    0.347 Encryption.py:39(scramble)
+    12516    0.050    0.000    0.050    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+    37716    0.049    0.000    0.049    0.000 {built-in method numpy.core._multiarray_umath.dragon4_positional}
+   262144    0.041    0.000    0.041    0.000 {built-in method math.cos}
+   262144    0.039    0.000    0.039    0.000 {built-in method math.sin}
+     6258    0.035    0.000    0.910    0.000 arrayprint.py:485(_array2string)
+   262146    0.034    0.000    0.034    0.000 {built-in method math.sqrt}
+    25104    0.034    0.000    0.060    0.000 arrayprint.py:946(<genexpr>)
+    18838    0.031    0.000    0.049    0.000 {built-in method builtins.max}
+    59604    0.031    0.000    0.031    0.000 {method 'format' of 'str' objects}
+   226756    0.028    0.000    0.028    0.000 {built-in method builtins.len}
+     6258    0.028    0.000    0.584    0.000 arrayprint.py:416(_get_format_function)
+    12512    0.028    0.000    0.067    0.000 _ufunc_config.py:32(seterr)
+    72748    0.024    0.000    0.024    0.000 {method 'split' of 'str' objects}
+    12516    0.023    0.000    0.084    0.000 fromnumeric.py:69(_wrapreduction)
+     6258    0.023    0.000    1.004    0.000 arrayprint.py:523(array2string)
+    12512    0.022    0.000    0.024    0.000 _ufunc_config.py:131(geterr)
+    18924    0.022    0.000    0.029    0.000 arrayprint.py:701(_extendLine)
+    18924    0.021    0.000    0.058    0.000 arrayprint.py:715(_extendLine_pretty)
+     6248    0.021    0.000    1.026    0.000 arrayprint.py:1426(_array_repr_implementation)
+   148767    0.020    0.000    0.020    0.000 {method 'append' of 'list' objects}
+     6256    0.020    0.000    0.528    0.000 arrayprint.py:869(__init__)
+     6258    0.019    0.000    0.938    0.000 arrayprint.py:468(wrapper)
+    25104    0.018    0.000    0.085    0.000 arrayprint.py:951(<genexpr>)
+        1    0.018    0.018    3.265    3.265 main.py:209(cryptoCompress)
+     6258    0.016    0.000    0.037    0.000 arrayprint.py:61(_make_options_dict)
+     6258    0.014    0.000    0.014    0.000 arrayprint.py:367(_get_formatdict)
+        6    0.013    0.002    0.013    0.002 {built-in method builtins.min}
+    12526    0.013    0.000    0.115    0.000 {built-in method numpy.core._multiarray_umath.implement_array_function}
+    18746    0.013    0.000    0.013    0.000 {built-in method builtins.pow}
+        1    0.012    0.012    1.882    1.882 main.py:216(cryptoExcract)
+     6258    0.011    0.000    0.011    0.000 {built-in method builtins.locals}
+        2    0.011    0.005    0.011    0.005 {method 'join' of 'str' objects}
+    12512    0.011    0.000    0.011    0.000 {built-in method numpy.seterrobj}
+     6248    0.011    0.000    0.011    0.000 arrayprint.py:1365(dtype_is_implied)
+     6258    0.010    0.000    0.062    0.000 fromnumeric.py:2638(amax)
+     6256    0.010    0.000    0.538    0.000 arrayprint.py:375(<lambda>)
+     6258    0.009    0.000    0.286    0.000 arrayprint.py:742(_formatArray)
+     6258    0.008    0.000    0.008    0.000 arrayprint.py:66(<dictcomp>)
+    12516    0.008    0.000    0.008    0.000 fromnumeric.py:70(<dictcomp>)
+     6258    0.008    0.000    0.040    0.000 fromnumeric.py:2763(amin)
+    25104    0.007    0.000    0.010    0.000 arrayprint.py:955(<genexpr>)
+     6256    0.007    0.000    0.049    0.000 _ufunc_config.py:429(__enter__)
+     6258    0.007    0.000    0.078    0.000 <__array_function__ internals>:2(amax)
+     6256    0.007    0.000    0.032    0.000 _ufunc_config.py:434(__exit__)
+    25024    0.006    0.000    0.006    0.000 {built-in method numpy.geterrobj}
+    25104    0.006    0.000    0.008    0.000 arrayprint.py:956(<genexpr>)
+     6258    0.006    0.000    0.052    0.000 <__array_function__ internals>:2(amin)
+    18924    0.005    0.000    0.005    0.000 {method 'splitlines' of 'str' objects}
+    22698    0.005    0.000    0.005    0.000 {method 'rstrip' of 'str' objects}
+    25030    0.004    0.000    0.004    0.000 {built-in method builtins.issubclass}
+     6258    0.004    0.000    0.004    0.000 {method 'update' of 'dict' objects}
+    18774    0.003    0.000    0.003    0.000 {method 'items' of 'dict' objects}
+     6256    0.003    0.000    0.003    0.000 _ufunc_config.py:425(__init__)
+     6258    0.003    0.000    0.003    0.000 {method 'discard' of 'set' objects}
+     6258    0.002    0.000    0.002    0.000 {method 'copy' of 'dict' objects}
+     6304    0.002    0.000    0.002    0.000 {built-in method builtins.isinstance}
+     6256    0.002    0.000    0.002    0.000 arrayprint.py:860(_none_or_positive_arg)
+     6258    0.002    0.000    0.002    0.000 {built-in method _thread.get_ident}
+     6258    0.002    0.000    0.002    0.000 {built-in method builtins.id}
+     6258    0.002    0.000    0.002    0.000 {method 'add' of 'set' objects}
+     6270    0.002    0.000    0.002    0.000 {built-in method numpy.asarray}
+     6258    0.002    0.000    0.002    0.000 fromnumeric.py:2633(_amax_dispatcher)
+        6    0.001    0.000    0.003    0.000 Quantization.py:133(printbin)
+     6258    0.001    0.000    0.001    0.000 fromnumeric.py:2758(_amin_dispatcher)
+        4    0.001    0.000    0.001    0.000 {built-in method numpy.zeros}
+       62    0.001    0.000    0.001    0.000 {built-in method _codecs.utf_8_decode}
+       62    0.001    0.000    0.001    0.000 codecs.py:319(decode)
+        3    0.000    0.000    0.001    0.000 {built-in method io.open}
+    50/10    0.000    0.000    0.001    0.000 arrayprint.py:333(_leading_trailing)
         1    0.000    0.000    0.000    0.000 {method 'tofile' of 'bitarray.bitarray' objects}
-       42    0.000    0.000    0.000    0.000 Quantization.py:22(bin_to_float)
-       48    0.000    0.000    0.000    0.000 {built-in method _struct.pack}
+        2    0.000    0.000    0.000    0.000 {built-in method open3d.cpu.pybind.geometry.create_sphere}
+        4    0.000    0.000    0.000    0.000 random.py:123(seed)
+       10    0.000    0.000    0.010    0.001 arrayprint.py:1534(_array_str_implementation)
+       60    0.000    0.000    0.000    0.000 {built-in method numpy.core._multiarray_umath.dragon4_scientific}
+       40    0.000    0.000    0.000    0.000 arrayprint.py:922(<genexpr>)
+       40    0.000    0.000    0.000    0.000 index_tricks.py:757(__getitem__)
+       10    0.000    0.000    0.000    0.000 <__array_function__ internals>:2(concatenate)
+        2    0.000    0.000    0.000    0.000 arrayprint.py:1185(__init__)
+        1    0.000    0.000    7.500    7.500 main.py:231(main)
+        4    0.000    0.000    0.000    0.000 {function Random.seed at 0x7f6d894bc700}
+       36    0.000    0.000    0.000    0.000 arrayprint.py:1193(__call__)
+       40    0.000    0.000    0.000    0.000 arrayprint.py:925(<genexpr>)
         6    0.000    0.000    0.000    0.000 Quantization.py:17(float_to_bin)
-        7    0.000    0.000    0.000    0.000 copy.py:242(_keep_alive)
-        6    0.000    0.000    0.000    0.000 {method 'digest' of '_sha512.sha512' objects}
-       48    0.000    0.000    0.000    0.000 {built-in method _struct.unpack}
-       25    0.000    0.000    0.000    0.000 {built-in method builtins.len}
-        2    0.000    0.000    0.000    0.000 {built-in method numpy.asarray}
+        4    0.000    0.000    0.000    0.000 {method 'digest' of '_sha512.sha512' objects}
+        2    0.000    0.000    0.000    0.000 {built-in method _locale.nl_langinfo}
+       34    0.000    0.000    0.000    0.000 {method 'ljust' of 'str' objects}
+        2    0.000    0.000    0.000    0.000 _bootlocale.py:33(getpreferredencoding)
+       30    0.000    0.000    0.000    0.000 {method 'partition' of 'str' objects}
         1    0.000    0.000    0.000    0.000 cProfile.py:133(__exit__)
-        8    0.000    0.000    0.000    0.000 {built-in method builtins.pow}
-        6    0.000    0.000    0.000    0.000 {built-in method from_bytes}
-        6    0.000    0.000    0.000    0.000 {built-in method _sha512.sha512}
-       14    0.000    0.000    0.000    0.000 {method 'get' of 'dict' objects}
-       21    0.000    0.000    0.000    0.000 {built-in method builtins.id}
-        6    0.000    0.000    0.000    0.000 {method 'encode' of 'str' objects}
-       12    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+       12    0.000    0.000    0.000    0.000 {built-in method _struct.pack}
+        6    0.000    0.000    0.000    0.000 Quantization.py:22(bin_to_float)
+        2    0.000    0.000    0.000    0.000 codecs.py:309(__init__)
+       40    0.000    0.000    0.000    0.000 arrayprint.py:926(<genexpr>)
+       40    0.000    0.000    0.000    0.000 arrayprint.py:927(<genexpr>)
+        2    0.000    0.000    0.000    0.000 codecs.py:260(__init__)
+        4    0.000    0.000    0.000    0.000 {built-in method _sha512.sha512}
+       40    0.000    0.000    0.000    0.000 arrayprint.py:930(<genexpr>)
+       40    0.000    0.000    0.000    0.000 arrayprint.py:939(<genexpr>)
+        2    0.000    0.000    0.000    0.000 arrayprint.py:374(<lambda>)
+       12    0.000    0.000    0.000    0.000 {built-in method _struct.unpack}
+        4    0.000    0.000    0.000    0.000 {method 'encode' of 'str' objects}
+        4    0.000    0.000    0.000    0.000 {built-in method from_bytes}
+       10    0.000    0.000    0.000    0.000 multiarray.py:148(concatenate)
+        1    0.000    0.000    0.000    0.000 main.py:227(<listcomp>)
         6    0.000    0.000    0.000    0.000 {built-in method builtins.bin}
         6    0.000    0.000    0.000    0.000 {method 'zfill' of 'str' objects}
-        7    0.000    0.000    0.000    0.000 {built-in method builtins.getattr}
-        7    0.000    0.000    0.000    0.000 {built-in method builtins.issubclass}
         1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
-        1    0.000    0.000    0.000    0.000 main.py:118(<listcomp>)
 
 

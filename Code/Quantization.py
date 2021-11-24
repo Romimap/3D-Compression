@@ -183,7 +183,7 @@ def readVerticesBits(bitstring):
 
     printbin(bitstring, n, n + (12*k), n, n + 3 * k, k)
     print ('...')
-    for i in range(vertexCount):
+    for i in range(0, vertexCount):
         x = int(bitstring[n:n + k], 2)
         n += k
         y = int(bitstring[n:n + k], 2)
@@ -207,14 +207,10 @@ def readVerticesBits(bitstring):
     normals = numpy.zeros([vertexCount, 3])
     printbin(bitstring, n, n + (kn * 10), n, n + kn, 17)
     print ('...')
-    for i in range(vertexCount):
-
-        #print(bitstring[n:n + kn])
+    for i in range(0, vertexCount):
         x = int(bitstring[n:n + kn], 2)
         n += kn
-
-        if (x <= 100): #Errors here !
-            normals[i] = fibSphere[x]
+        normals[i] = fibSphere[x]
 
     printbin(bitstring, n - (kn * 10), n, n - kn, n, 17)
 
