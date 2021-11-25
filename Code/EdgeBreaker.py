@@ -1,33 +1,49 @@
 '''
 Python EdgeBreaker algorithm working with the Open3D library.
 
-Implemented from:
+Implemented and improved from:
 https://www.cs.cmu.edu/~alla/edgebreaker_simple.pdf
 '''
 
-import sys
-import open3d
 import numpy
+import open3d
+import sys
+import time
 
 
 # ------------------------------------------------------------
 # Global variables
 # ------------------------------------------------------------
 
+## DEBUG AND VISUALIZATION
+
+_debug = False						# True if you want to enable color changes and delay between draw calls
+_debugPrint = False					# True if you want to enable debug prints
+
+_debugDelayPerFrame = 0.1			# Delay between draw calls
+
+_debugTriangleColor = [240, 0, 0]	# The current triangle color for debug-drawing triangles (to use, divide by 255)
+_debugColorOffset = 24				# For each triangle, 24 will be added or removed from one of the RGB component
+_debugRGBIndex = 1					# RGB index, 0 = R, 1 = G, 2 = B
+_debugRGBIncrease = True			# When true, we add _debugColorOffset for each triangle, else we subtract _debugColorOffset
+
+_visualizer = None					# The visualizer (the window)
+_lastUpdateTime = -1				# Last visual update time in seconds
+
+
+## EDGEBREAKER RELATED
+
 _heMesh = None 				# The mesh containing half-edges data
 
 _deltas = []				# List of 3D points/vectors storing the first points and the correction vectors
 _clers = ""					# String storing the CLERS steps of the EdgeBreaker algorithm's path
 
-# _vertices = []				# List of int references to vertices: V in the paper
-# _oppositeCorners = []		# List of int references to opposite corners: O in the paper
 _marked = []				# List of bool indicating whether a vertex has already been visited: M in the paper
 _flagged = []				# List of bool indicating whether a triangle has already been visited: U in the paper
 
-_missingTrianglesCount = 0	# The number of triangles not already seen by EdgeBreaker
+_missingTrianglesCount = 0	# The number of triangles not already seen by EdgeBreaker ## UNUSED FOR NOW ##
 
-_halfEdgeId = 0				# Select first half-edge to begin the EdgeBreaker algorithm
-_triangleId = 0				# Select the first triangle (always associated with first halfEdge)
+_startingHalfEdge = 0		# Select first half-edge to begin the EdgeBreaker algorithm
 
 
 # ------------------------------------------------------------
@@ -185,6 +201,73 @@ def printMeshInfo():
 	print(he_mesh.half_edges)
 
 
+def debugInit():
+	global _debug, _visualizer
+
+	_debug = True
+
+	_visualizer = open3d.visualization.Visualizer()
+	_visualizer.create_window()
+	_visualizer.add_geometry(_heMesh)
+
+	_heMesh.paint_uniform_color([0.6, 0.6, 0.6])
+
+
+def debugEnd():
+	global _debug
+
+	if _debug:
+		_debug = False
+		_visualizer.run()
+
+
+def debugPrint(string):
+	if _debugPrint:
+		print(string)
+	
+
+def debugDrawAndWait():
+	global _lastUpdateTime
+
+	if _debug:
+		if _lastUpdateTime == -1:
+			_lastUpdateTime = time.time()
+
+		while True:
+			if _lastUpdateTime + _debugDelayPerFrame <= time.time():
+				_lastUpdateTime += _debugDelayPerFrame
+				_visualizer.update_geometry(_heMesh)
+				break
+
+			_visualizer.poll_events()
+			_visualizer.update_renderer()
+
+
+def debugChangeTriangleColor(halfEdgeId):
+	global _debugTriangleColor, _debugRGBIndex, _debugRGBIncrease, _heMesh
+
+	if _debug:
+		if _debugRGBIncrease and _debugTriangleColor[_debugRGBIndex] >= 240:
+			_debugTriangleColor[_debugRGBIndex] = 240
+			_debugRGBIncrease = False
+			_debugRGBIndex = (_debugRGBIndex - 1) % 3
+		elif not _debugRGBIncrease and _debugTriangleColor[_debugRGBIndex] == 0:
+			_debugTriangleColor[_debugRGBIndex] = 0
+			_debugRGBIncrease = True
+			_debugRGBIndex = (_debugRGBIndex + 2) % 3
+		
+		if _debugRGBIncrease:
+			_debugTriangleColor[_debugRGBIndex] += _debugColorOffset
+		else:
+			_debugTriangleColor[_debugRGBIndex] -= _debugColorOffset
+
+		triangleColor = [x / 255 for x in _debugTriangleColor]
+
+		_heMesh.vertex_colors[getVertexId(halfEdgeId)] = triangleColor
+		# _heMesh.vertex_colors[getNextVertexId(halfEdgeId)] = triangleColor
+		# _heMesh.vertex_colors[getPreviousVertexId(halfEdgeId)] = triangleColor
+
+
 # ------------------------------------------------------------
 # Other functions
 # ------------------------------------------------------------
@@ -207,7 +290,7 @@ def initData():
 
 # Initialize the EdgeBreaker algorithm by choosing the best fitting starting vertex in the first mesh's triangle
 def initCompression():
-	global _halfEdgeId, _triangleId, _clers, _deltas
+	global _startingHalfEdge, _clers, _deltas
 
 	initData()
 
@@ -215,46 +298,48 @@ def initCompression():
 	# If not possible, try to find an 'R' or an 'L' configuration with the same method
 	for i in range(6):
 		if i < 3:	# Search fo 'C' or 'S' configurations
-			if getLeftCornerHeId(_halfEdgeId) != -1 and getRightCornerHeId(_halfEdgeId) != -1:
-				if isMarked(_halfEdgeId):
+			if getLeftCornerHeId(_startingHalfEdge) != -1 and getRightCornerHeId(_startingHalfEdge) != -1:
+				if isMarked(_startingHalfEdge):
 					break	# Found an 'S' configuration
 				else:
 					break	# Found a 'C' configuration
 		else:		# Search fo 'R' or 'L' configurations
-			if getLeftCornerHeId(_halfEdgeId) != -1:
+			if getLeftCornerHeId(_startingHalfEdge) != -1:
 				break		# Found an 'R' configuration
-			if getRightCornerHeId(_halfEdgeId) != -1:
+			if getRightCornerHeId(_startingHalfEdge) != -1:
 				break		# Found an 'L' configuration
-		_halfEdgeId = getNextHeId(_halfEdgeId)
+		_startingHalfEdge = getNextHeId(_startingHalfEdge)
 
 	# First vertex position
-	_deltas.append(getVertexPosFromHeId(getPreviousHeId(_halfEdgeId)))
+	_deltas.append(getVertexPosFromHeId(getPreviousHeId(_startingHalfEdge)))
 	# Vector from first to second vertex
-	_deltas.append(getDistanceVectorFromHeId(getPreviousHeId(_halfEdgeId), _halfEdgeId))
+	_deltas.append(getDistanceVectorFromHeId(getPreviousHeId(_startingHalfEdge), _startingHalfEdge))
 	# Vector from second to third vertex
-	_deltas.append(getDistanceVectorFromHeId(_halfEdgeId, getNextHeId(_halfEdgeId)))
+	_deltas.append(getDistanceVectorFromHeId(_startingHalfEdge, getNextHeId(_startingHalfEdge)))
 
 	# Mark these vertices as "seen"
-	mark(_halfEdgeId)
-	mark(getNextHeId(_halfEdgeId))
-	mark(getPreviousHeId(_halfEdgeId))
+	mark(getNextHeId(_startingHalfEdge))
+	mark(getPreviousHeId(_startingHalfEdge))
 
 
 def compress(halfEdgeId):
-	global _triangleId, _deltas, _clers
+	global _deltas, _clers
+
+	debugDrawAndWait()
 
 	while True:
 		if halfEdgeId == -1:
 			return
 
-		print()
-		print(f'Current he id: {halfEdgeId}')
-		print(f'Current vertex id: {getVertexId(halfEdgeId)}')
-		print(f'Marks: {_marked}')
-		print(f'Flags: {_flagged}')
+		debugPrint(f'\nCurrent HE id: {halfEdgeId}')
+		debugPrint(f'Current vertex id: {getVertexId(halfEdgeId)}')
+		debugPrint(f'Marks: {_marked}')
+		debugPrint(f'Flags: {_flagged}')
 
-		_triangleId = getTriangleFromHeId(halfEdgeId)
-		flag(_triangleId)
+		flag(halfEdgeId)
+
+		debugChangeTriangleColor(halfEdgeId)
+		debugDrawAndWait()
 
 		if not isMarked(halfEdgeId):							# 'C' configuration
 			print("Found C configuration")
@@ -296,21 +381,22 @@ def compress(halfEdgeId):
 def main():
 	global _heMesh
 
-	print("Running MAIN from EdgeBreaker.py")
-	mesh = open3d.io.read_triangle_mesh("Models/complex_shape.obj")
+	print("\n\n\n\n\nRunning MAIN from EdgeBreaker.py")
+	mesh = open3d.io.read_triangle_mesh("Models/bunny.obj")
 	_heMesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(mesh)
 	
+	debugInit()
 	initCompression()
-	compress(_halfEdgeId)
+	compress(_startingHalfEdge)
 
 	print(f'CLERS = {_clers}')
-	print("Deltas:")
+	debugPrint("Deltas:")
 	for v in _deltas:
-		print(v)
+		debugPrint(v)
 
-	open3d.visualization.draw_geometries([_heMesh])
-	print(numpy.asarray(_heMesh.triangles))
-	print(numpy.asarray(_heMesh.half_edges))
+	# print(numpy.asarray(_heMesh.triangles))
+	# print(numpy.asarray(_heMesh.half_edges))
+	debugEnd()
 
 	return 0
 
