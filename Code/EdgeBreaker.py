@@ -5,10 +5,13 @@ Implemented and improved from:
 https://www.cs.cmu.edu/~alla/edgebreaker_simple.pdf
 '''
 
+import cProfile
 import numpy
 import open3d
 import sys
 import time
+
+from pstats import Stats, SortKey
 
 
 # ------------------------------------------------------------
@@ -16,6 +19,8 @@ import time
 # ------------------------------------------------------------
 
 ## DEBUG AND VISUALIZATION
+
+_doProfiling = True					# Do some profiling
 
 _debug = False						# True if you want to enable color changes and delay between draw calls
 _debugPrint = False					# True if you want to enable debug prints
@@ -218,7 +223,7 @@ def debugEnd():
 
 	if _debug:
 		_debug = False
-		_visualizer.run()
+		# _visualizer.run()
 
 
 def debugPrint(string):
@@ -322,13 +327,20 @@ def initCompression():
 	mark(getPreviousHeId(_startingHalfEdge))
 
 
+_it = 0
+_maxIt = 100
+
 def compress(halfEdgeId):
-	global _deltas, _clers
+	global _deltas, _clers, _it
 
 	debugDrawAndWait()
 
 	while True:
 		if halfEdgeId == -1:
+			return
+
+		_it += 1
+		if _it >= _maxIt:
 			return
 
 		debugPrint(f'\nCurrent HE id: {halfEdgeId}')
@@ -378,11 +390,26 @@ def compress(halfEdgeId):
 # Main
 # ------------------------------------------------------------
 
+def doProfiling():
+	if _doProfiling:
+		with cProfile.Profile() as pr:
+			main()
+		
+		with open('profiling_stats.txt', 'w') as stream:
+			stats = Stats(pr, stream=stream)
+			stats.strip_dirs()
+			stats.sort_stats('time')
+			stats.dump_stats('.prof_stats')
+			stats.print_stats()
+
+	return 0
+
+
 def main():
 	global _heMesh
 
 	print("\n\n\n\n\nRunning MAIN from EdgeBreaker.py")
-	mesh = open3d.io.read_triangle_mesh("Models/bunny.obj")
+	mesh = open3d.io.read_triangle_mesh("../Models/bunny.obj")
 	_heMesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(mesh)
 	
 	debugInit()
@@ -402,4 +429,7 @@ def main():
 
 
 if __name__ == '__main__':
-	sys.exit(main())
+	if _doProfiling:
+		sys.exit(doProfiling())
+	else:
+		sys.exit(main())
