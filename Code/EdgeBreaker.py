@@ -22,10 +22,10 @@ from pstats import Stats, SortKey
 
 _doProfiling = True					# Do some profiling
 
-_debug = False						# True if you want to enable color changes and delay between draw calls
+_debug = True						# True if you want to enable color changes and delay between draw calls
 _debugPrint = False					# True if you want to enable debug prints
 
-_debugDelayPerFrame = 0.1			# Delay between draw calls
+_debugDelayPerFrame = 0.01			# Delay between draw calls
 
 _debugTriangleColor = [240, 0, 0]	# The current triangle color for debug-drawing triangles (to use, divide by 255)
 _debugColorOffset = 24				# For each triangle, 24 will be added or removed from one of the RGB component
@@ -51,6 +51,14 @@ _missingTrianglesCount = 0	# The number of triangles not already seen by EdgeBre
 _startingHalfEdge = 0		# Select first half-edge to begin the EdgeBreaker algorithm
 
 
+## DATA STORAGE
+
+# Store frequently accessed data in numpy arrays to accelerate access time
+_halfEdges = None
+_vertices = None
+_triangles = None
+
+
 # ------------------------------------------------------------
 # Data access functions
 # ------------------------------------------------------------
@@ -60,7 +68,7 @@ _startingHalfEdge = 0		# Select first half-edge to begin the EdgeBreaker algorit
 def getVertexId(halfEdgeId):
 	if halfEdgeId == -1:
 		return -1
-	return _heMesh.half_edges[halfEdgeId].vertex_indices[0]
+	return _halfEdges[halfEdgeId].vertex_indices[0]
 
 
 def getNextVertexId(halfEdgeId):
@@ -98,7 +106,7 @@ def getRightVertexId(halfEdgeId):
 def getNextHeId(halfEdgeId):
 	if halfEdgeId == -1:
 		return -1
-	return _heMesh.half_edges[halfEdgeId].next
+	return _halfEdges[halfEdgeId].next
 
 
 def getPreviousHeId(halfEdgeId):
@@ -110,7 +118,7 @@ def getPreviousHeId(halfEdgeId):
 def getTwinHeId(halfEdgeId):
 	if halfEdgeId == -1:
 		return -1
-	return _heMesh.half_edges[halfEdgeId].twin
+	return _halfEdges[halfEdgeId].twin
 
 
 def getOppositeCornerHeId(halfEdgeId):
@@ -136,13 +144,13 @@ def getRightCornerHeId(halfEdgeId):
 def getTriangleFromHeId(halfEdgeId):
 	if halfEdgeId == -1:
 		return -1
-	return _heMesh.half_edges[halfEdgeId].triangle_index
+	return _halfEdges[halfEdgeId].triangle_index
 
 
 ## DISTANCE VECTORS
 
 def getDistanceVectorFromVerticesId(fromVertexId, toVertexId):
-	return _heMesh.vertices[toVertexId] - _heMesh.vertices[fromVertexId]
+	return _vertices[toVertexId] - _vertices[fromVertexId]
 
 
 def getDistanceVectorFromHeId(fromHeId, toHeId):
@@ -154,11 +162,11 @@ def getDistanceVectorFromHeId(fromHeId, toHeId):
 ## VERTEX POSITION
 
 def getVertexPosFromVertexId(vertexId):
-	return _heMesh.vertices[vertexId]
+	return _vertices[vertexId]
 
 
 def getVertexPosFromHeId(halfEdgeId):
-	return _heMesh.vertices[getVertexId(halfEdgeId)]
+	return _vertices[getVertexId(halfEdgeId)]
 
 
 ## MARKS/FLAGS
@@ -209,13 +217,12 @@ def printMeshInfo():
 def debugInit():
 	global _debug, _visualizer
 
-	_debug = True
+	if _debug:
+		_visualizer = open3d.visualization.Visualizer()
+		_visualizer.create_window()
+		_visualizer.add_geometry(_heMesh)
 
-	_visualizer = open3d.visualization.Visualizer()
-	_visualizer.create_window()
-	_visualizer.add_geometry(_heMesh)
-
-	_heMesh.paint_uniform_color([0.6, 0.6, 0.6])
+		_heMesh.paint_uniform_color([0.6, 0.6, 0.6])
 
 
 def debugEnd():
@@ -223,7 +230,7 @@ def debugEnd():
 
 	if _debug:
 		_debug = False
-		# _visualizer.run()
+		_visualizer.run()
 
 
 def debugPrint(string):
@@ -279,15 +286,20 @@ def debugChangeTriangleColor(halfEdgeId):
 
 # Initialize the data used by EdgeBreaker
 def initData():
-	global _marked, _flagged, _missingTrianglesCount
+	global _marked, _flagged, _missingTrianglesCount, _halfEdges, _vertices, _triangles
 
 	# Marks and flags
 	_marked = [False] * len(_heMesh.vertices) 		# Marks: if a vertex has been visited or not
 	_flagged = [False] * len(_heMesh.triangles)		# Flags: if a triangle has been visited or not
 	_missingTrianglesCount = len(_heMesh.triangles)	# No triangle has been seen yet
 
+	# Numpy arrays for acceleration
+	_halfEdges = numpy.array(_heMesh.half_edges)
+	_vertices = numpy.array(_heMesh.vertices)
+	_triangles = numpy.array(_heMesh.triangles)
+
 	# Mark boundary vertices as "seen"
-	for halfEdge in _heMesh.half_edges:
+	for halfEdge in _halfEdges:
 		if halfEdge.twin == -1:
 			_marked[halfEdge.vertex_indices[0]] = True
 			_marked[halfEdge.vertex_indices[1]] = True
@@ -327,8 +339,8 @@ def initCompression():
 	mark(getPreviousHeId(_startingHalfEdge))
 
 
-_it = 0
-_maxIt = 100
+# _it = 0
+# _maxIt = 100
 
 def compress(halfEdgeId):
 	global _deltas, _clers, _it
@@ -339,9 +351,9 @@ def compress(halfEdgeId):
 		if halfEdgeId == -1:
 			return
 
-		_it += 1
-		if _it >= _maxIt:
-			return
+		# _it += 1
+		# if _it >= _maxIt:
+		# 	return
 
 		debugPrint(f'\nCurrent HE id: {halfEdgeId}')
 		debugPrint(f'Current vertex id: {getVertexId(halfEdgeId)}')
@@ -354,7 +366,7 @@ def compress(halfEdgeId):
 		debugDrawAndWait()
 
 		if not isMarked(halfEdgeId):							# 'C' configuration
-			print("Found C configuration")
+			debugPrint("Found C configuration")
 			# Append correction vector
 			_deltas.append(getVertexPosFromHeId(halfEdgeId)								# Current
 							- getVertexPosFromHeId(getPreviousHeId(halfEdgeId))			# Previous
@@ -367,20 +379,20 @@ def compress(halfEdgeId):
 
 			if isFlagged(getRightCornerHeId(halfEdgeId)):	# isFlagged(i) == i triangle already seen
 				if isFlagged(getLeftCornerHeId(halfEdgeId)):	# 'E' configuration
-					print("Found E configuration")
+					debugPrint("Found E configuration")
 					_clers += 'E'
 					return
 				else:											# 'R' configuration
-					print("Found R configuration")
+					debugPrint("Found R configuration")
 					_clers += 'R'
 					halfEdgeId = getLeftCornerHeId(halfEdgeId)
 			else:
 				if isFlagged(getLeftCornerHeId(halfEdgeId)):	# 'L' configuration
-					print("Found L configuration")
+					debugPrint("Found L configuration")
 					_clers += 'L'
 					halfEdgeId = getRightCornerHeId(halfEdgeId)
 				else:											# 'S' configuration
-					print("Found S configuration")
+					debugPrint("Found S configuration")
 					_clers += 'S'
 					compress(getRightCornerHeId(halfEdgeId))	# Create a branch for the right triangles
 					halfEdgeId = getLeftCornerHeId(halfEdgeId)	# When the right triangles are done, continue with the left triangles
@@ -409,7 +421,7 @@ def main():
 	global _heMesh
 
 	print("\n\n\n\n\nRunning MAIN from EdgeBreaker.py")
-	mesh = open3d.io.read_triangle_mesh("../Models/bunny.obj")
+	mesh = open3d.io.read_triangle_mesh("Models/bunny.obj")
 	_heMesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(mesh)
 	
 	debugInit()
