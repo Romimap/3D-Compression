@@ -20,7 +20,7 @@ from pstats import Stats, SortKey
 
 ## DEBUG AND VISUALIZATION
 
-_doProfiling = True					# Do some profiling
+_doProfiling = False				# Do some profiling
 
 _debug = True						# True if you want to enable color changes and delay between draw calls
 _debugPrint = False					# True if you want to enable debug prints
@@ -51,6 +51,16 @@ _missingTrianglesCount = 0	# The number of triangles not already seen by EdgeBre
 
 _startingHalfEdge = 0		# Select first half-edge to begin the EdgeBreaker algorithm
 _previousHeId = -1			# Id of the previously visited half-edge, used to calculate delta vector(_previousHeId → halfEdgeId)
+
+
+## EDGEBREAKER DECOMPRESSION RELATED
+
+_stack = []
+
+_vertexIndex = 3
+_letterIndex = 0
+
+_returnWhenL = True
 
 
 ## DATA STORAGE
@@ -306,7 +316,7 @@ def debugChangeTriangleColor(halfEdgeId):
 
 
 # ------------------------------------------------------------
-# Other functions
+# Edgebreaker compression part
 # ------------------------------------------------------------
 
 # Initialize the data used by EdgeBreaker
@@ -384,6 +394,9 @@ def compress(halfEdgeId):
 		if halfEdgeId == -1:
 			return
 
+		if isFlagged(halfEdgeId):
+			return
+
 		flag(halfEdgeId)
 
 		debugChangeTriangleColor(halfEdgeId)
@@ -435,6 +448,90 @@ def compress(halfEdgeId):
 
 
 # ------------------------------------------------------------
+# Edgebreaker decompression part
+# ------------------------------------------------------------
+
+def initDecompression():
+	global _stack
+
+	_stack = [2, 1]
+	print(f'v 1')
+	print(f'v 2')
+
+
+def readFromDeltas():
+	global _stack, _vertexIndex
+
+	print(f'v {_vertexIndex}')
+	_vertexIndex += 1
+	_stack = [_stack[0] + _vertexIndex + _stack[1]]
+
+
+def decompress():
+	global _stack, _vertexIndex, _letterIndex, _returnWhenL
+
+	while True:
+		if _letterIndex == len(_clers):
+			break
+
+		letter = _clers[_letterIndex]
+		_letterIndex += 1
+
+		print()
+		print(f'Letter: {letter}')
+		print(f'Stack: {_stack}')
+
+		if letter == 'C':
+			readFromDeltas()
+
+			print(f'C f {_stack[0]} {_stack[1]} {_stack[2]}')
+
+			leftOverVertexIndex = _stack[2]		# Left vertex
+			_stack = [_stack[0], _stack[1]]		# Right edge
+
+			previousReturnWhenL = _returnWhenL
+			_returnWhenL = True
+			decompress()
+			_returnWhenL = previousReturnWhenL
+
+			_stack = [_stack[0] + leftOverVertexIndex + _stack[1]]	# Right, top, left
+		elif letter == 'L':
+			if _returnWhenL:
+				...
+			else:
+				readFromDeltas()
+
+				print(f'L f {_stack[0]} {_stack[1]} {_stack[2]}')
+
+				_stack = [_stack[0], _stack[1]]		# Right edge
+		elif letter == 'E':
+			readFromDeltas()
+			
+			print(f'E f {_stack[0]} {_stack[1]} {_stack[2]}')
+			...
+		elif letter == 'R':
+			readFromDeltas()
+
+			print(f'R f {_stack[0]} {_stack[1]} {_stack[2]}')
+			
+			_stack = [_stack[1], _stack[2]]		# Left edge
+		elif letter == 'S':
+			readFromDeltas()
+
+			print(f'S f {_stack[0]} {_stack[1]} {_stack[2]}')
+
+			leftEdge = [_stack[1], _stack[2]]	# Left vertex
+			_stack = [_stack[0], _stack[1]]		# Right edge
+
+			previousReturnWhenL = _returnWhenL
+			_returnWhenL = False
+			decompress()
+			_returnWhenL = previousReturnWhenL
+
+			_stack = leftEdge	# Left edge
+
+
+# ------------------------------------------------------------
 # Main
 # ------------------------------------------------------------
 
@@ -457,7 +554,7 @@ def main():
 	global _heMesh
 
 	print("\n\n\n\n\nRunning MAIN from EdgeBreaker.py")
-	mesh = open3d.io.read_triangle_mesh("Models/complex_shape.obj")
+	mesh = open3d.io.read_triangle_mesh("Models/complex_shape_2.obj")
 	_heMesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(mesh)
 	
 	debugInit()
@@ -468,9 +565,10 @@ def main():
 	print(f'Deltas: {len(_deltas)}')
 	for v in _deltas:
 		print(v)
+	
+	# initDecompression()
+	# decompress()
 
-	# print(numpy.asarray(_heMesh.triangles))
-	# print(numpy.asarray(_heMesh.half_edges))
 	debugEnd()
 
 	return 0
