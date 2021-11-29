@@ -44,11 +44,13 @@ _deltas = []				# List of 3D points/vectors storing the first points and the cor
 _clers = ""					# String storing the CLERS steps of the EdgeBreaker algorithm's path
 
 _marked = []				# List of bool indicating whether a vertex has already been visited: M in the paper
+_inDeltas = []				# List of bool indicating whether a vertex position has already been saved in _deltas array
 _flagged = []				# List of bool indicating whether a triangle has already been visited: U in the paper
 
 _missingTrianglesCount = 0	# The number of triangles not already seen by EdgeBreaker ## UNUSED FOR NOW ##
 
 _startingHalfEdge = 0		# Select first half-edge to begin the EdgeBreaker algorithm
+_previousHeId = -1			# Id of the previously visited half-edge, used to calculate delta vector(_previousHeId → halfEdgeId)
 
 
 ## DATA STORAGE
@@ -169,7 +171,11 @@ def getVertexPosFromHeId(halfEdgeId):
 	return _vertices[getVertexId(halfEdgeId)]
 
 
-## MARKS/FLAGS
+# ------------------------------------------------------------
+# FLAGS
+# ------------------------------------------------------------
+
+## MARKS
 
 def mark(halfEdgeId):
 	global _marked
@@ -187,6 +193,8 @@ def isMarked(halfEdgeId):
 		return _marked[getVertexId(halfEdgeId)]
 
 
+## FLAGS
+
 def flag(halfEdgeId):
 	global _flagged
 
@@ -203,16 +211,33 @@ def isFlagged(halfEdgeId):
 		return _flagged[getTriangleFromHeId(halfEdgeId)]
 
 
+## DELTAS
+
+def addPosToDeltasIfNecessary(halfEdgeId):
+	global _deltas, _inDeltas
+
+	vertexId = getVertexId(halfEdgeId)
+	if not _inDeltas[vertexId]:
+		pos = getVertexPosFromHeId(halfEdgeId)
+		_deltas.append(pos)
+		_inDeltas[vertexId] = True
+		debugPrint(f'# Add pos {pos}')
+
+
+def addVectorToDeltasIfNecessary(previousHalfEdgeId, halfEdgeId):
+	global _deltas, _inDeltas
+
+	vertexId = getVertexId(halfEdgeId)
+	if not _inDeltas[vertexId]:
+		vector = getDistanceVectorFromHeId(previousHalfEdgeId, halfEdgeId)
+		_deltas.append(vector)
+		_inDeltas[vertexId] = True
+		debugPrint(f'# Add vector {vector}')
+
+
 # ------------------------------------------------------------
 # Debug functions
 # ------------------------------------------------------------
-
-def printMeshInfo():
-	mesh = open3d.io.read_triangle_mesh("Models/cube.obj")
-	he_mesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(mesh)
-	print("Half edges:")
-	print(he_mesh.half_edges)
-
 
 def debugInit():
 	global _debug, _visualizer
@@ -286,10 +311,11 @@ def debugChangeTriangleColor(halfEdgeId):
 
 # Initialize the data used by EdgeBreaker
 def initData():
-	global _marked, _flagged, _missingTrianglesCount, _halfEdges, _vertices, _triangles
+	global _marked, _inDeltas, _flagged, _missingTrianglesCount, _halfEdges, _vertices, _triangles
 
 	# Marks and flags
 	_marked = [False] * len(_heMesh.vertices) 		# Marks: if a vertex has been visited or not
+	_inDeltas = [False] * len(_heMesh.vertices) 	# Marks: if a vertex position has been saved in _deltas or not
 	_flagged = [False] * len(_heMesh.triangles)		# Flags: if a triangle has been visited or not
 	_missingTrianglesCount = len(_heMesh.triangles)	# No triangle has been seen yet
 
@@ -307,9 +333,10 @@ def initData():
 
 # Initialize the EdgeBreaker algorithm by choosing the best fitting starting vertex in the first mesh's triangle
 def initCompression():
-	global _startingHalfEdge, _clers, _deltas
+	global _startingHalfEdge, _previousHeId, _clers, _deltas, _inDeltas
 
 	initData()
+	debugDrawAndWait()
 
 	# Try to find a 'C' or an 'S' configuration by rotating the first vertex in the current triangle
 	# If not possible, try to find an 'R' or an 'L' configuration with the same method
@@ -327,74 +354,83 @@ def initCompression():
 				break		# Found an 'L' configuration
 		_startingHalfEdge = getNextHeId(_startingHalfEdge)
 
+	first = getNextHeId(_startingHalfEdge)
+	second = getPreviousHeId(_startingHalfEdge)
+	third = _startingHalfEdge
+
 	# First vertex position
-	_deltas.append(getVertexPosFromHeId(getPreviousHeId(_startingHalfEdge)))
+	addPosToDeltasIfNecessary(first)
 	# Vector from first to second vertex
-	_deltas.append(getDistanceVectorFromHeId(getPreviousHeId(_startingHalfEdge), _startingHalfEdge))
-	# Vector from second to third vertex
-	_deltas.append(getDistanceVectorFromHeId(_startingHalfEdge, getNextHeId(_startingHalfEdge)))
+	addVectorToDeltasIfNecessary(first, second)
 
 	# Mark these vertices as "seen"
-	mark(getNextHeId(_startingHalfEdge))
-	mark(getPreviousHeId(_startingHalfEdge))
+	mark(first)
+	mark(second)
 
+	# Set previously visited half-edge
+	_previousHeId = second
 
-# _it = 0
-# _maxIt = 100
+	# Draw if debug mode is actived
+	debugChangeTriangleColor(first)
+	debugDrawAndWait()
+	debugChangeTriangleColor(second)
+	debugDrawAndWait()
+
 
 def compress(halfEdgeId):
-	global _deltas, _clers, _it
-
-	debugDrawAndWait()
+	global _deltas, _clers, _previousHeId
 
 	while True:
 		if halfEdgeId == -1:
 			return
-
-		# _it += 1
-		# if _it >= _maxIt:
-		# 	return
-
-		debugPrint(f'\nCurrent HE id: {halfEdgeId}')
-		debugPrint(f'Current vertex id: {getVertexId(halfEdgeId)}')
-		debugPrint(f'Marks: {_marked}')
-		debugPrint(f'Flags: {_flagged}')
 
 		flag(halfEdgeId)
 
 		debugChangeTriangleColor(halfEdgeId)
 		debugDrawAndWait()
 
+		fromTo = f'{getVertexId(_previousHeId)} → {getVertexId(halfEdgeId)}'
+
 		if not isMarked(halfEdgeId):							# 'C' configuration
-			debugPrint("Found C configuration")
+			debugPrint(f'{fromTo} Found C configuration')
 			# Append correction vector
-			_deltas.append(getVertexPosFromHeId(halfEdgeId)								# Current
-							- getVertexPosFromHeId(getPreviousHeId(halfEdgeId))			# Previous
-							- getVertexPosFromHeId(getNextHeId(halfEdgeId))				# Next
-							+ getVertexPosFromHeId(getOppositeCornerHeId(halfEdgeId)))	# Opposite
+			addVectorToDeltasIfNecessary(_previousHeId, halfEdgeId)
+			# _deltas.append(getVertexPosFromHeId(halfEdgeId)							# Current
+			# 				- getVertexPosFromHeId(getPreviousHeId(halfEdgeId))			# Previous
+			# 				- getVertexPosFromHeId(getNextHeId(halfEdgeId))				# Next
+			# 				+ getVertexPosFromHeId(getOppositeCornerHeId(halfEdgeId)))	# Opposite
 			_clers += 'C'
 			mark(halfEdgeId)
+			_previousHeId = halfEdgeId
 			halfEdgeId = getRightCornerHeId(halfEdgeId)
 		else:
 
 			if isFlagged(getRightCornerHeId(halfEdgeId)):	# isFlagged(i) == i triangle already seen
 				if isFlagged(getLeftCornerHeId(halfEdgeId)):	# 'E' configuration
-					debugPrint("Found E configuration")
+					debugPrint(f'{fromTo} Found E configuration')
+					addVectorToDeltasIfNecessary(_previousHeId, halfEdgeId)
 					_clers += 'E'
 					return
 				else:											# 'R' configuration
-					debugPrint("Found R configuration")
+					debugPrint(f'{fromTo} Found R configuration')
+					addVectorToDeltasIfNecessary(_previousHeId, halfEdgeId)
 					_clers += 'R'
+					_previousHeId = halfEdgeId
 					halfEdgeId = getLeftCornerHeId(halfEdgeId)
 			else:
 				if isFlagged(getLeftCornerHeId(halfEdgeId)):	# 'L' configuration
-					debugPrint("Found L configuration")
+					debugPrint(f'{fromTo} Found L configuration')
+					addVectorToDeltasIfNecessary(_previousHeId, halfEdgeId)
 					_clers += 'L'
+					_previousHeId = halfEdgeId
 					halfEdgeId = getRightCornerHeId(halfEdgeId)
 				else:											# 'S' configuration
-					debugPrint("Found S configuration")
+					debugPrint(f'{fromTo} Found S configuration')
+					addVectorToDeltasIfNecessary(_previousHeId, halfEdgeId)
 					_clers += 'S'
+					_previousHeId = halfEdgeId
 					compress(getRightCornerHeId(halfEdgeId))	# Create a branch for the right triangles
+					_previousHeId = halfEdgeId
 					halfEdgeId = getLeftCornerHeId(halfEdgeId)	# When the right triangles are done, continue with the left triangles
 
 
@@ -421,7 +457,7 @@ def main():
 	global _heMesh
 
 	print("\n\n\n\n\nRunning MAIN from EdgeBreaker.py")
-	mesh = open3d.io.read_triangle_mesh("Models/bunny.obj")
+	mesh = open3d.io.read_triangle_mesh("Models/complex_shape.obj")
 	_heMesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(mesh)
 	
 	debugInit()
@@ -429,9 +465,9 @@ def main():
 	compress(_startingHalfEdge)
 
 	print(f'CLERS = {_clers}')
-	debugPrint("Deltas:")
+	print(f'Deltas: {len(_deltas)}')
 	for v in _deltas:
-		debugPrint(v)
+		print(v)
 
 	# print(numpy.asarray(_heMesh.triangles))
 	# print(numpy.asarray(_heMesh.half_edges))
