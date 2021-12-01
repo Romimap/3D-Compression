@@ -22,7 +22,7 @@ from pstats import Stats, SortKey
 
 _doProfiling = False				# Do some profiling
 
-_debug = True						# True if you want to enable color changes and delay between draw calls
+_debug = False						# True if you want to enable color changes and delay between draw calls
 _debugPrint = False					# True if you want to enable debug prints
 
 _debugDelayPerFrame = 0.01			# Delay between draw calls
@@ -40,8 +40,9 @@ _lastUpdateTime = -1				# Last visual update time in seconds
 
 _heMesh = None 				# The mesh containing half-edges data
 
-_deltas = []				# List of 3D points/vectors storing the first points and the correction vectors
 _clers = ""					# String storing the CLERS steps of the EdgeBreaker algorithm's path
+_deltas = []				# List of 3D points/vectors storing the first points and the correction vectors
+_normals = []				# TODO
 
 _marked = []				# List of bool indicating whether a vertex has already been visited: M in the paper
 _inDeltas = []				# List of bool indicating whether a vertex position has already been saved in _deltas array
@@ -49,7 +50,7 @@ _flagged = []				# List of bool indicating whether a triangle has already been v
 
 _missingTrianglesCount = 0	# The number of triangles not already seen by EdgeBreaker ## UNUSED FOR NOW ##
 
-_startingHalfEdge = 0		# Select first half-edge to begin the EdgeBreaker algorithm
+_startingHalfEdge = 71		# Select first half-edge to begin the EdgeBreaker algorithm
 _previousHeId = -1			# Id of the previously visited half-edge, used to calculate delta vector(_previousHeId → halfEdgeId)
 
 
@@ -60,7 +61,8 @@ _stack = []
 _vertexIndex = 3
 _letterIndex = 0
 
-_returnWhenL = True
+_addedInC = []
+_keepForSLeftBranch = []
 
 
 ## DATA STORAGE
@@ -315,6 +317,17 @@ def debugChangeTriangleColor(halfEdgeId):
 		# _heMesh.vertex_colors[getPreviousVertexId(halfEdgeId)] = triangleColor
 
 
+def debugPrintInfos():
+	print(f'nbVertices = {len(_heMesh.vertices)}')
+	print(f'nbTriangles = {len(_heMesh.triangles)}')
+	print(f'nbChar = {len(_clers)}')
+	print(f'c = {_clers.count("C")}')
+	print(f'l = {_clers.count("L")}')
+	print(f'e = {_clers.count("E")}')
+	print(f'r = {_clers.count("R")}')
+	print(f's = {_clers.count("S")}')
+
+
 # ------------------------------------------------------------
 # Edgebreaker compression part
 # ------------------------------------------------------------
@@ -451,20 +464,67 @@ def compress(halfEdgeId):
 # Edgebreaker decompression part
 # ------------------------------------------------------------
 
+def createNewVertex():
+	global _stack, _vertexIndex
+
+	_stack.insert(1, _vertexIndex)
+	print(f'v {_vertexIndex}')
+	_vertexIndex += 1
+
+
+def getExistingVertexFromEnd():
+	global _stack
+
+	_stack.insert(1, _stack.pop(-1))
+
+
+def getExistingVertexFromBegining():
+	global _stack
+
+	_stack[1], _stack[2] = _stack[2], _stack[1]
+
+
+def removeVertexIfNotSaved(index, doUnsave):
+	global _stack, _keepForSLeftBranch
+
+	id = _keepForSLeftBranch.index(_stack[index])
+	if id == ValueError:	# Not found in _keepForSLeftBranch, can remove it from _stack
+		del(_stack[index])
+	else:					# Found in _keepForSLeftBranch, remove from _keepForSLeftBranch but has to remain in _stack for later use
+		del(_keepForSLeftBranch[id])
+
+
+def removeVertexInRCase():
+	removeVertexIfNotSaved(0)	# Right vertex
+
+
+def removeVertexInLCase():
+	removeVertexIfNotSaved(2)	# Left vertex
+
+
+def removeVerticesInECase():
+	removeVertexIfNotSaved(2)	# Left vertex
+	removeVertexIfNotSaved(1)	# Top vertex
+	removeVertexIfNotSaved(0)	# Right vertex
+
+
+def saveVerticesInSCase():
+	_keepForSLeftBranch
+
+	_keepForSLeftBranch.append(_stack[1])	# Top vertex
+	_keepForSLeftBranch.append(_stack[2])	# Left vertex
+
+
+def saveTriangle():
+	print(f'f {_stack[2]} {_stack[1]} {_stack[0]}')	# Vertices: right -> top -> left
+
+
 def initDecompression():
 	global _stack
 
 	_stack = [2, 1]
 	print(f'v 1')
 	print(f'v 2')
-
-
-def readFromDeltas():
-	global _stack, _vertexIndex
-
-	print(f'v {_vertexIndex}')
-	_vertexIndex += 1
-	_stack = [_stack[0] + _vertexIndex + _stack[1]]
 
 
 def decompress():
@@ -482,53 +542,15 @@ def decompress():
 		print(f'Stack: {_stack}')
 
 		if letter == 'C':
-			readFromDeltas()
-
-			print(f'C f {_stack[0]} {_stack[1]} {_stack[2]}')
-
-			leftOverVertexIndex = _stack[2]		# Left vertex
-			_stack = [_stack[0], _stack[1]]		# Right edge
-
-			previousReturnWhenL = _returnWhenL
-			_returnWhenL = True
-			decompress()
-			_returnWhenL = previousReturnWhenL
-
-			_stack = [_stack[0] + leftOverVertexIndex + _stack[1]]	# Right, top, left
+			...
 		elif letter == 'L':
-			if _returnWhenL:
-				...
-			else:
-				readFromDeltas()
-
-				print(f'L f {_stack[0]} {_stack[1]} {_stack[2]}')
-
-				_stack = [_stack[0], _stack[1]]		# Right edge
+			...
 		elif letter == 'E':
-			readFromDeltas()
-			
-			print(f'E f {_stack[0]} {_stack[1]} {_stack[2]}')
 			...
 		elif letter == 'R':
-			readFromDeltas()
-
-			print(f'R f {_stack[0]} {_stack[1]} {_stack[2]}')
-			
-			_stack = [_stack[1], _stack[2]]		# Left edge
+			...
 		elif letter == 'S':
-			readFromDeltas()
-
-			print(f'S f {_stack[0]} {_stack[1]} {_stack[2]}')
-
-			leftEdge = [_stack[1], _stack[2]]	# Left vertex
-			_stack = [_stack[0], _stack[1]]		# Right edge
-
-			previousReturnWhenL = _returnWhenL
-			_returnWhenL = False
-			decompress()
-			_returnWhenL = previousReturnWhenL
-
-			_stack = leftEdge	# Left edge
+			...
 
 
 # ------------------------------------------------------------
@@ -565,6 +587,8 @@ def main():
 	print(f'Deltas: {len(_deltas)}')
 	for v in _deltas:
 		print(v)
+
+	debugPrintInfos()
 	
 	# initDecompression()
 	# decompress()
