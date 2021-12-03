@@ -1,3 +1,9 @@
-/Code/__pycache__/
+*.txt
+*.prof_stats
+
+/bits/
 /.vscode/
-/bits
+
+/Screenshots & Gifs/
+
+/Code/__pycache__/
