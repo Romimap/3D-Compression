@@ -8,15 +8,17 @@ import Code
 import copy
 import math
 
-from Code.Quantization import quantizeVertices
+from Code.Quantization import quantizeVertices, quantizedPositionsToBitstring, normalsToBitstring, printBitString
 from Code.Quantization import readVerticesBits
 from Code.Encryption import scramble, xorifyNormals
 from Code.Encryption import unscramble
+from Code.Huffman import makeCodebook
 
 import cProfile
 from pstats import Stats, SortKey
 
 k = 10
+MODELNAME = "suzanne"
 
 def interpolate (A, B, C):
 	n = A + B + C
@@ -207,14 +209,22 @@ def testFunction():
 
 #FOR A FILENAME, RETURNS A BITSTRING THAT CAN BE USED TO WRITE A FILE
 def cryptoCompress(password, filename):
-	bitstring = quantizeVertices(objImporter(filename), k)
+	mesh = objImporter(filename)
+	bitstring = quantizeVertices(mesh, k)
+	verticesBitstring = quantizedPositionsToBitstring(numpy.asarray(mesh.vertices), k)
+	normalsBitstring = normalsToBitstring(numpy.asarray(mesh.vertex_normals), k)
+
+	bitstring += verticesBitstring
+	bitstring += normalsBitstring
+
 	bitstring = scramble(bitstring, 10, password)
 	bitstring = xorifyNormals(bitstring, 10, password)
+	
 	return bitstring
 
 #FOR A BITSTRING, RETURNS A MESH
 def cryptoExcract(password, bitstring):
-	mesh = objImporter("./Models/Sphere.obj") #NOTE: remove that
+	mesh = objImporter("./Models/" + MODELNAME + ".obj") #NOTE: remove that
 	bitstring = xorifyNormals(bitstring, 10, password)
 	bitstring = unscramble(bitstring, 10, password)
 	vertices, normals = readVerticesBits(bitstring)
@@ -228,12 +238,25 @@ def writeFile(bitstring, filename):
 	with open(filename,"wb+") as f:
 		bitArray.tofile(f)
 
+def readFile(filename):
+	bitstring = ''
+	with open(filename, "rb") as f:
+		bytes = (list(map(str,numpy.fromfile(f,"u1"))))
+		for i in bytes:
+			bitstring += '{0:08b}'.format(int(i))
+
+	bitstring = bitstring[8:]
+	return bitstring
+
 def main():
 	#testFunction()
 	
-	bitstring = cryptoCompress('password', './Models/bunny_normals.obj')
-	writeFile(bitstring, "bunny_normals.rfcp")
-	mesh = cryptoExcract('BADpassword', bitstring)
+	bitstring = cryptoCompress('password', './Models/' + MODELNAME + '.obj')
+	printBitString(bitstring)
+	writeFile(bitstring, MODELNAME + ".rfcp")
+	bitstring = readFile(MODELNAME + ".rfcp")
+	printBitString(bitstring)
+	mesh = cryptoExcract('password', bitstring)
 
 	open3d.visualization.draw_geometries([mesh])
 

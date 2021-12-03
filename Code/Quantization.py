@@ -51,20 +51,18 @@ def remap(value, minFrom, maxFrom, minTo, maxTo):
     return ((value - minFrom) / (maxFrom - minFrom)) * (maxTo - minTo) + minTo
 
 
-#quantize vertices, returning their 92 bits format, and their 2^k bits format
+#quantize vertices, returning their bitstream header
 #bits out format : k(4), vertexnb(32), minx(32), miny(32), minz(32), maxx(32), maxy(32), maxz(32), v1(3 * 2^k), v2(3 * 2^k), ... , vn(3 * 2^k)
 #                 |                            HEADER (228 bits)                                 |                  VERTICES                  |
 def quantizeVertices(mesh, k):
     vertices = numpy.asarray(mesh.vertices)
-    normals = numpy.asarray(mesh.vertex_normals)
 
     print("vnb @ quantization: " + str(len(vertices)))
 
-    ansBits = ''
-
-    ansBits += '{0:04b}'.format(k)
-    ansBits += '{0:032b}'.format(len(vertices))
-    print("bin : " + ansBits[4:])
+    bitstring = ''
+    bitstring += '{0:04b}'.format(k)
+    bitstring += '{0:032b}'.format(len(vertices))
+    print("bin : " + bitstring[4:])
 
     # * * * * * * * * * *
     # * * POSITIONS * * *
@@ -81,12 +79,12 @@ def quantizeVertices(mesh, k):
         if vertex[1] < min[1]: min[1] = vertex[1]
         if vertex[2] < min[2]: min[2] = vertex[2]
 
-    ansBits += float_to_bin(numpy.float64(min[0]))
-    ansBits += float_to_bin(numpy.float64(min[1]))
-    ansBits += float_to_bin(numpy.float64(min[2]))
-    ansBits += float_to_bin(numpy.float64(max[0]))
-    ansBits += float_to_bin(numpy.float64(max[1]))
-    ansBits += float_to_bin(numpy.float64(max[2]))
+    bitstring += float_to_bin(numpy.float64(min[0]))
+    bitstring += float_to_bin(numpy.float64(min[1]))
+    bitstring += float_to_bin(numpy.float64(min[2]))
+    bitstring += float_to_bin(numpy.float64(max[0]))
+    bitstring += float_to_bin(numpy.float64(max[1]))
+    bitstring += float_to_bin(numpy.float64(max[2]))
 
     #Normalize coordinates into a unit AABB
     for vertex in vertices:
@@ -103,16 +101,21 @@ def quantizeVertices(mesh, k):
         vertex[0] = x
         vertex[1] = y
         vertex[2] = z
-        ansBits += str('{0:0' + str(k) + 'b}').format(x)
-        ansBits += str('{0:0' + str(k) + 'b}').format(y)
-        ansBits += str('{0:0' + str(k) + 'b}').format(z)
 
-    #Remap the data to the original AABB
+    return bitstring
+
+#Returns the bitstring representing the positions of our mesh
+def quantizedPositionsToBitstring(vertices, k):
+    bitstring = ''
     for vertex in vertices:
-        vertex[0] = remap(vertex[0], 0, kpow, min[0], max[0])
-        vertex[1] = remap(vertex[1], 0, kpow, min[1], max[1])
-        vertex[2] = remap(vertex[2], 0, kpow, min[2], max[2])
+        bitstring += str('{0:0' + str(k) + 'b}').format(int(vertex[0]))
+        bitstring += str('{0:0' + str(k) + 'b}').format(int(vertex[1]))
+        bitstring += str('{0:0' + str(k) + 'b}').format(int(vertex[2]))
+    return bitstring
 
+#Returns the bitstring representing the normals of our mesh
+def normalsToBitstring(normals, k):
+    bitstring = ''
     # * * * * * * * * * *
     # * * * NORMALS * * *
     # * * * * * * * * * *
@@ -123,11 +126,8 @@ def quantizeVertices(mesh, k):
 
     for normal in normals:
         id = closestNormalID(kdFibSphere, normal)
-        normal[0] = fibSphere[id][0]
-        normal[1] = fibSphere[id][1]
-        normal[2] = fibSphere[id][2]
-        ansBits += '{0:017b}'.format(int(id))
-    return ansBits
+        bitstring += '{0:017b}'.format(int(id))
+    return bitstring
 
 
 def printbin(bitstring, start, end, colorstart = 0, colorend = 0, rangevalue = 8):
@@ -148,6 +148,34 @@ def printbin(bitstring, start, end, colorstart = 0, colorend = 0, rangevalue = 8
             print(' ', end='')
         print(f"{Code.bcolors.bcolors.ENDC}")
     print(str(end - 1).ljust(8) + ": END")
+
+def printBitString(bitstring):
+    # K
+    k = int(bitstring[0:4], 2)
+    # Vertex Count
+    vertexCount = int(bitstring[4:36], 2)
+
+    print("K: " + str(k))
+    print("VertexCount: " + str(vertexCount))
+
+    printbin(bitstring, 0, 4)
+    printbin(bitstring, 4, 228)
+
+    n = headerSize
+    printbin(bitstring, n, n + (12*k), n, n + 3 * k, k)
+    print ('...')
+    n += 3 * k * vertexCount
+    printbin(bitstring, n - (12 * k), n, n - 3 * k, n, k)
+
+    kn = 17
+    printbin(bitstring, n, n + (kn * 10), n, n + kn, 17)
+    print ('...')
+    n += 17 * vertexCount
+    printbin(bitstring, n - (kn * 10), n, n - kn, n, 17)
+
+
+
+
 
 
 def readVerticesBits(bitstring):
@@ -173,16 +201,13 @@ def readVerticesBits(bitstring):
     min = numpy.array([minx, miny, minz])
     max = numpy.array([maxx, maxy, maxz])
 
-    printbin(bitstring, 0, 4)
-    printbin(bitstring, 4, 228)
+   
 
     # Vertices
     n = headerSize
     kpow = pow(2, k) - 1
     vertices = numpy.zeros([vertexCount, 3])
 
-    printbin(bitstring, n, n + (12*k), n, n + 3 * k, k)
-    print ('...')
     for i in range(0, vertexCount):
         x = int(bitstring[n:n + k], 2)
         n += k
@@ -196,23 +221,16 @@ def readVerticesBits(bitstring):
             remap(z, 0, kpow, min[2], max[2])
         ])
         vertices[i] = vertex
-    printbin(bitstring, n - (12 * k), n, n - 3 * k, n, k)
-
-
-
 
     # Normals
     fibSphere = fibonacci_sphere()
     kn = 17
     normals = numpy.zeros([vertexCount, 3])
-    printbin(bitstring, n, n + (kn * 10), n, n + kn, 17)
-    print ('...')
     for i in range(0, vertexCount):
         x = int(bitstring[n:n + kn], 2)
         n += kn
         normals[i] = fibSphere[x]
 
-    printbin(bitstring, n - (kn * 10), n, n - kn, n, 17)
 
     
     return vertices, normals
