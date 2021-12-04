@@ -11,6 +11,8 @@ import open3d
 import sys
 import time
 
+from dataclasses import dataclass
+from datetime import datetime
 from pstats import Stats, SortKey
 
 
@@ -52,17 +54,6 @@ _missingTrianglesCount = 0	# The number of triangles not already seen by EdgeBre
 
 _startingHalfEdge = 0		# Select first half-edge to begin the EdgeBreaker algorithm
 _previousHeId = -1			# Id of the previously visited half-edge, used to calculate delta vector(_previousHeId → halfEdgeId)
-
-
-## EDGEBREAKER DECOMPRESSION RELATED
-
-_stack = []
-
-_vertexIndex = 3
-_letterIndex = 0
-
-_addedInC = []
-_keepForSLeftBranch = []
 
 
 ## DATA STORAGE
@@ -116,6 +107,10 @@ def getRightVertexId(halfEdgeId):
 
 
 ## HALF-EDGES
+
+def getHalfEdge(halfEdgeId):
+	return _halfEdges[halfEdgeId]
+
 
 def getNextHeId(halfEdgeId):
 	if halfEdgeId == -1:
@@ -507,74 +502,85 @@ def compress(halfEdgeId):
 # Edgebreaker decompression part
 # ------------------------------------------------------------
 
-def createNewVertex(isFromCCase = False):
-	global _stack, _vertexIndex
+## TRIANGLE DATACLASS
 
-	_stack.insert(1, _vertexIndex)
-	print(f'v {_vertexIndex}')
-	if isFromCCase:
-		_addedInC.append(_vertexIndex)
+@dataclass
+class Triangle:
+	id: int
+	rightHe: open3d.geometry.HalfEdge
+	leftHe: open3d.geometry.HalfEdge
+	bottomHe: open3d.geometry.HalfEdge
+
+
+## EDGEBREAKER DECOMPRESSION RELATED
+
+_letterIndex = 0
+_vertexIndex = 0
+_triangleIndex = 0
+
+
+## FUNCTIONS
+
+def createHalfEdge(fromId, toId, triangleId = -1, nextHeId = -1, twinHeId = -1):
+	halfEdge = open3d.geometry.HalfEdge()
+	halfEdge.vertex_indices = [fromId, toId]
+	if triangleId != -1:
+		halfEdge.triangle_index = triangleId
+	if nextHeId != -1:
+		halfEdge.next = nextHeId
+	if twinHeId != -1:
+		halfEdge.twin = twinHeId
+	
+	return halfEdge
+
+
+def createTriangle(letter, halfEdgeId):
+	global _vertexIndex, _triangleIndex
+
+	halfEdge = getHalfEdge(halfEdgeId)
+	topVertexId = _vertexIndex
 	_vertexIndex += 1
 
+	# Create half-edges
+	bottomHe = createHalfEdge(halfEdge.vertex_indices[1], halfEdge.vertex_indices[0], _triangleIndex)
+	rightHe = createHalfEdge(halfEdge.vertex_indices[0], topVertexId, _triangleIndex)
+	leftHe = createHalfEdge(topVertexId, halfEdge.vertex_indices[1], _triangleIndex)
 
-def getExistingVertexFromEnd():
-	global _stack
+	# Add them to the half-edge mesh
+	_heMesh
 
-	_stack.insert(1, _stack.pop(-1))
-
-
-def getExistingVertexFromBegining():
-	global _stack
-
-	_stack[1], _stack[2] = _stack[2], _stack[1]
+	...
 
 
-def removeVertexIfNotSaved(index):
-	global _stack, _keepForSLeftBranch
+def createInitialTriangle():
+	global _letterIndex, _vertexIndex
+	
+	letter = _clers[_letterIndex]
+	_letterIndex += 1
 
-	id = _keepForSLeftBranch.index(_stack[index])
-	if id == ValueError:	# Not found in _keepForSLeftBranch, can remove it from _stack
-		del(_stack[index])
-	else:					# Found in _keepForSLeftBranch, remove from _keepForSLeftBranch but has to remain in _stack for later use
-		del(_keepForSLeftBranch[id])
-
-
-def removeVertexInRCase():
-	removeVertexIfNotSaved(0)	# Right vertex
+	
+	...
 
 
-def removeVertexInLCase():
-	removeVertexIfNotSaved(2)	# Left vertex
-
-
-def removeVerticesInECase():
-	removeVertexIfNotSaved(2)	# Left vertex
-	removeVertexIfNotSaved(1)	# Top vertex
-	removeVertexIfNotSaved(0)	# Right vertex
-
-
-def saveMiddleVertexInSCase():
-	_keepForSLeftBranch
-
-	_keepForSLeftBranch.append(_stack[1])	# Top vertex
+def createNewTriangle():
+	...
 
 
 def saveTriangle():
-	print(f'f {_stack[2]} {_stack[1]} {_stack[0]}')	# Vertices: right -> top -> left
+	# print(f'f {_stack[2]} {_stack[1]} {_stack[0]}')	# Vertices: right -> top -> left
+	...
 
 
 def initDecompression():
-	global _stack
+	global _vertexIndex
 
-	_stack = [2, 1]
+	print(f'v 0')
 	print(f'v 1')
-	print(f'v 2')
+	_vertexIndex = 2
 
 
 def decompress():
-	global _stack, _vertexIndex, _letterIndex
-
-	isInRightBranch = True
+	global _vertexIndex, _letterIndex
 
 	while True:
 		if _letterIndex == len(_clers):
@@ -585,53 +591,28 @@ def decompress():
 
 		print()
 		print(f'Letter: {letter}')
-		print(f'Stack before: {_stack}')
-		print(f'Saved before: {_keepForSLeftBranch}')
-		print(f'C indexes before: {_addedInC}')
 
 		if letter == 'C':
-			createNewVertex(isFromCCase=True)
-			saveTriangle()
+			...
 		elif letter == 'c':
 			print(f'ERROR: should not find \'c\' chars in CLERS string')
 		elif letter == 'L':
-			createNewVertex()
-			saveTriangle()
-			removeVertexInLCase()
+			...
 		elif letter == 'l':
-			getExistingVertexFromBegining()
-			saveTriangle()
-			removeVertexInLCase()
+			...
 		elif letter == 'E':
-			isInRightBranch = False
-			createNewVertex()
-			saveTriangle()
-			removeVerticesInECase()
+			...
 		elif letter == 'e':
-			if isInRightBranch:
-				isInRightBranch = False
-				getExistingVertexFromEnd()
-			else:
-				getExistingVertexFromBegining()
-			saveTriangle()
-			removeVerticesInECase()
+			...
 		elif letter == 'R':
-			createNewVertex()
-			saveTriangle()
-			removeVertexInRCase()
+			...
 		elif letter == 'r':
-			getExistingVertexFromEnd()
-			saveTriangle()
-			removeVertexInRCase()
+			...
 		elif letter == 'S':
 			isInRightBranch = True
-			createNewVertex()
-			saveTriangle()
-			saveMiddleVertexInSCase()
+			...
 		elif letter == 's':
-			isInRightBranch = True
-		
-		print(f'Stack after: {_stack}')
+			...
 
 
 # ------------------------------------------------------------
@@ -656,17 +637,46 @@ def doProfiling():
 def main():
 	global _heMesh
 
-	print("\n\n\n\n\nRunning MAIN from EdgeBreaker.py")
+	print(f'\n\n\n\n\nRunning MAIN from EdgeBreaker.py')
+	print(f'Starting at: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
 	mesh = open3d.io.read_triangle_mesh("Models/bunny.obj")
+	# Quantization.quantizeVertices(mesh, 4)
 	_heMesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(mesh)
 
+
+
+	arraySize = 200_000
+
+	start1 = time.time()
+	test1 = []
+	for i in range(arraySize):
+		test1.append(i)
+	end1 = time.time()
+	print(f'Classic array: done in {(end1 - start1)}s')
+
+	start2 = time.time()
+	test2 = numpy.array([])
+	for i in range(arraySize):
+		test2 = numpy.append(test2, i)
+	end2 = time.time()
+	print(f'Numpy array: done in {(end2 - start2)}s')
+
+
+
 	print(numpy.asarray(_heMesh.half_edges))
+
+	he = open3d.geometry.HalfEdge()
+	he.vertex_indices = [65, 66]
+	he.triangle_index = 3
+	he.next = 666
+	he.twin = 999
+	print(he)
 	
 	debugInit()
-	initCompression()
-	compress(_startingHalfEdge)
+	# initCompression()
+	# compress(_startingHalfEdge)
 
-	print(f'CLERS = {_clers}')
+	# print(f'CLERS = {_clers}')
 	# print(f'Deltas: {len(_deltas)}')
 	# for v in _deltas:
 	# 	print(v)
