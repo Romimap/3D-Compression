@@ -24,7 +24,7 @@ from pstats import Stats, SortKey
 
 _doProfiling = False				# Do some profiling
 
-_debug = True						# True if you want to enable color changes and delay between draw calls
+_debug = False						# True if you want to enable color changes and delay between draw calls
 _debugPrint = False					# True if you want to enable debug prints
 
 _debugDelayPerFrame = 0.00			# Delay between draw calls
@@ -50,9 +50,7 @@ _marked = []				# List of bool indicating whether a vertex has already been visi
 _inDeltas = []				# List of bool indicating whether a vertex position has already been saved in _deltas array
 _flagged = []				# List of bool indicating whether a triangle has already been visited: U in the paper
 
-_missingTrianglesCount = 0	# The number of triangles not already seen by EdgeBreaker ## UNUSED FOR NOW ##
-
-_startingHalfEdge = 0		# Select first half-edge to begin the EdgeBreaker algorithm
+_startingHalfEdge = 71		# Select first half-edge to begin the EdgeBreaker algorithm
 _previousHeId = -1			# Id of the previously visited half-edge, used to calculate delta vector(_previousHeId → halfEdgeId)
 
 
@@ -317,6 +315,8 @@ def debugPrintInfos():
 
 	print(f'nbTriangles = {len(_heMesh.triangles)}')
 	print(f'nbChar = {nbChar}')
+
+	print(f'nbHalfEdges = {_halfEdges.size}')
 	
 	C = _clers.count("C")
 	L = _clers.count("L")
@@ -352,13 +352,12 @@ def debugPrintInfos():
 
 # Initialize the data used by EdgeBreaker
 def initData():
-	global _marked, _inDeltas, _flagged, _missingTrianglesCount, _halfEdges, _vertices, _triangles
+	global _marked, _inDeltas, _flagged, _halfEdges, _vertices, _triangles
 
 	# Marks and flags
 	_marked = [False] * len(_heMesh.vertices) 		# Marks: if a vertex has been visited or not
 	_inDeltas = [False] * len(_heMesh.vertices) 	# Marks: if a vertex position has been saved in _deltas or not
 	_flagged = [False] * len(_heMesh.triangles)		# Flags: if a triangle has been visited or not
-	_missingTrianglesCount = len(_heMesh.triangles)	# No triangle has been seen yet
 
 	# Numpy arrays for acceleration
 	_halfEdges = numpy.array(_heMesh.half_edges)
@@ -399,6 +398,12 @@ def initCompression():
 	second = getPreviousHeId(_startingHalfEdge)
 	third = _startingHalfEdge
 
+	print("\n\n\nHalf edges:")
+	print(f'first = {first}, HE = {_halfEdges[first]}')
+	print(f'second = {second}, HE = {_halfEdges[second]}')
+	print(f'third = {third}, HE = {_halfEdges[third]}')
+	print("\n\n\n")
+
 	# First vertex position
 	addPosToDeltas(first)
 	# Vector from first to second vertex
@@ -433,8 +438,8 @@ def compress(halfEdgeId):
 		debugChangeTriangleColor(halfEdgeId)
 		debugDrawAndWait()
 
-		fromTo = f'{getVertexId(_previousHeId)} → {getVertexId(halfEdgeId)}'
 		vertexId = getVertexId(halfEdgeId)
+		fromTo = f'{getVertexId(_previousHeId)} → {vertexId}'
 
 		if not isMarked(halfEdgeId):							# 'C' configuration
 			if _inDeltas[vertexId]:
@@ -502,6 +507,77 @@ def compress(halfEdgeId):
 # Edgebreaker decompression part
 # ------------------------------------------------------------
 
+_verticesId = []			# V
+_verticesLocation = []		# G
+_oppositeHalfEdgeId = []	# O
+
+_lastTriangle = 0			# T
+_lastVertex = 2				# N
+_lastDelta = 0
+
+_markedVertices = []		# M
+_markedTriangles = []		# U
+
+
+def calculatePosFromDeltas(fromVertexPos):
+	global _lastDelta
+
+	_lastDelta += 1
+	vector = _deltas[_lastDelta]
+
+	return [fromVertexPos[0] + vector[0], fromVertexPos[1] + vector[1], fromVertexPos[2] + vector[2]]
+
+
+def decompressConnectivity(halfEdgeId):
+	...
+
+
+def initDecompression():
+	global _verticesId, _verticesLocation, _oppositeHalfEdgeId, _lastTriangle, _lastVertex, _markedVertices, _markedTriangles
+
+	# Initialize arrays
+	verticesCount = 2 + _clers.count('C') + _clers.count('L') + _clers.count('E') + _clers.count('R') + _clers.count('S')
+	trianglesCount = len(_clers)
+	halfEdgesCount = 3 * trianglesCount
+
+	print(f'_vertices: {verticesCount}')
+	print(f'_triangles: {trianglesCount}')
+	print(f'_halfEdges: {halfEdgesCount}')
+
+	_verticesId = [0] * verticesCount
+	_verticesId[1], _verticesId[2] = 1, 2
+
+	_oppositeHalfEdgeId = [-3] * halfEdgesCount
+	_oppositeHalfEdgeId[0], _oppositeHalfEdgeId[2] = -1, -1
+
+	_lastTriangle = 0
+	_lastVertex = 2
+
+	# Decompress connecivity
+	# decompressConnectivity(1)
+
+	# Initialize marks
+	_markedVertices = [False] * verticesCount
+	_markedTriangles = [False] * verticesCount
+
+	# Read first triangle
+	_verticesLocation[0] = _deltas[0]
+	_verticesLocation[1] = readDeltas(_verticesLocation[0])
+	_verticesLocation[2] = readDeltas(_verticesLocation[1])
+
+	_lastVertex = 2
+
+	_markedVertices[0], _markedVertices[1], _markedVertices[2] = True, True, True
+	_markedTriangles[0] = True
+
+	# Decompress vertices
+	# decompressVertices(_oppositeHalfEdgeId[1])
+
+
+# ------------------------------------------------------------
+# Edgebreaker decompression test
+# ------------------------------------------------------------
+
 ## TRIANGLE DATACLASS
 
 @dataclass
@@ -515,13 +591,26 @@ class Triangle:
 ## EDGEBREAKER DECOMPRESSION RELATED
 
 _letterIndex = 0
-_vertexIndex = 0
-_triangleIndex = 0
+
+_halfEdgeId = 0
+_vertexId = 0
+_triangleId = 0
+
+_halfEdgeStack = []
 
 
 ## FUNCTIONS
 
+def readDeltas(fromVertexId):
+	global _vertexId
+
+	_vertices[_vertexId] = _vertices[fromVertexId] + _deltas[_vertexId]
+	_vertexId += 1
+
+
 def createHalfEdge(fromId, toId, triangleId = -1, nextHeId = -1, twinHeId = -1):
+	global _halfEdges, _halfEdgeId
+
 	halfEdge = open3d.geometry.HalfEdge()
 	halfEdge.vertex_indices = [fromId, toId]
 	if triangleId != -1:
@@ -530,40 +619,71 @@ def createHalfEdge(fromId, toId, triangleId = -1, nextHeId = -1, twinHeId = -1):
 		halfEdge.next = nextHeId
 	if twinHeId != -1:
 		halfEdge.twin = twinHeId
+
+	_halfEdges[_halfEdgeId] = halfEdge
+	_halfEdgeId += 1
 	
 	return halfEdge
 
 
-def createTriangle(letter, halfEdgeId):
-	global _vertexIndex, _triangleIndex
+def createTriangle(halfEdgeId, direction):
+	global _halfEdges, _vertices, _triangles, _halfEdgeStack, _letterIndex, _vertexId, _triangleId
 
 	halfEdge = getHalfEdge(halfEdgeId)
-	topVertexId = _vertexIndex
-	_vertexIndex += 1
 
 	# Create half-edges
-	bottomHe = createHalfEdge(halfEdge.vertex_indices[1], halfEdge.vertex_indices[0], _triangleIndex)
-	rightHe = createHalfEdge(halfEdge.vertex_indices[0], topVertexId, _triangleIndex)
-	leftHe = createHalfEdge(topVertexId, halfEdge.vertex_indices[1], _triangleIndex)
+	bottomHe = createHalfEdge(halfEdge.vertex_indices[1], halfEdge.vertex_indices[0], _triangleId, _halfEdgeId + 1)
+	rightHe = createHalfEdge(halfEdge.vertex_indices[0], _vertexId, _triangleId, _halfEdgeId + 1)
+	leftHe = createHalfEdge(_vertexId, halfEdge.vertex_indices[1], _triangleId, _halfEdgeId - 2)
 
-	# Add them to the half-edge mesh
-	_heMesh
+	# Link bottom half-edge to previous triangle
+	bottomHe.twin = halfEdgeId
+	halfEdge.twin = _halfEdgeId - 3
 
-	...
+	# Get position of top vertex
+	readDeltas(halfEdge.vertex_indices[1])
 
-
-def createInitialTriangle():
-	global _letterIndex, _vertexIndex
-	
-	letter = _clers[_letterIndex]
-	_letterIndex += 1
-
-	
-	...
+	# Create the triangle
+	_triangles[_triangleId] = [0, 1, 2]
 
 
-def createNewTriangle():
-	...
+# TODO: generalize
+# Currently only working for 'C' initial triangles
+def initDecompression():
+	global _halfEdges, _vertices, _triangles, _halfEdgeStack, _letterIndex, _vertexId, _triangleId
+
+	verticesCount = 2 + _clers.count('C') + _clers.count('L') + _clers.count('E') + _clers.count('R') + _clers.count('S')
+	_vertices = numpy.full((verticesCount, 3), [0, 0, 0])
+
+	triangleCount = len(_clers)
+	_triangles = numpy.full((triangleCount, 3), [-1, -1, -1])
+	_halfEdges = numpy.full(triangleCount * 3, None, dtype=open3d.geometry.HalfEdge)
+
+	print(f'_vertices size: {int(_vertices.size / 3)}')
+	print(f'_triangles size: {int(_triangles.size / 3)}')
+	print(f'_halfEdges size: {_halfEdges.size}')
+
+	# Get vertices positions
+	_vertices[0] = _deltas[0]
+	_vertices[1] = _vertices[0] + _deltas[1]
+	_vertices[2] = _vertices[1] + _deltas[2]
+
+	# Create the triangle
+	_triangles[0] = [0, 1, 2]
+
+	# Create the according half-edges
+	createHalfEdge(0, 1, 0, 1)
+	createHalfEdge(1, 2, 0, 2)
+	createHalfEdge(2, 0, 0, 0)
+
+	# Add edgebreaker working half-edge to the stack
+	_halfEdgeStack.append(_halfEdges[1])
+
+	# Update the edgebreaker decompression indexes
+	_letterIndex = 1	# Read 1 letter
+	_vertexId = 3		# Created 3 vertices
+	_triangleId = 1		# Created 1 triangle
+	# _halfEdgeId automatically updates in createHalfEdge() function
 
 
 def saveTriangle():
@@ -571,16 +691,8 @@ def saveTriangle():
 	...
 
 
-def initDecompression():
-	global _vertexIndex
-
-	print(f'v 0')
-	print(f'v 1')
-	_vertexIndex = 2
-
-
 def decompress():
-	global _vertexIndex, _letterIndex
+	global _halfEdges, _vertices, _triangles, _halfEdgeStack, _letterIndex, _vertexId, _triangleId
 
 	while True:
 		if _letterIndex == len(_clers):
@@ -639,42 +751,13 @@ def main():
 
 	print(f'\n\n\n\n\nRunning MAIN from EdgeBreaker.py')
 	print(f'Starting at: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
-	mesh = open3d.io.read_triangle_mesh("Models/bunny.obj")
+	mesh = open3d.io.read_triangle_mesh("Models/complex_shape_2.obj")
 	# Quantization.quantizeVertices(mesh, 4)
 	_heMesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(mesh)
-
-
-
-	arraySize = 200_000
-
-	start1 = time.time()
-	test1 = []
-	for i in range(arraySize):
-		test1.append(i)
-	end1 = time.time()
-	print(f'Classic array: done in {(end1 - start1)}s')
-
-	start2 = time.time()
-	test2 = numpy.array([])
-	for i in range(arraySize):
-		test2 = numpy.append(test2, i)
-	end2 = time.time()
-	print(f'Numpy array: done in {(end2 - start2)}s')
-
-
-
-	print(numpy.asarray(_heMesh.half_edges))
-
-	he = open3d.geometry.HalfEdge()
-	he.vertex_indices = [65, 66]
-	he.triangle_index = 3
-	he.next = 666
-	he.twin = 999
-	print(he)
 	
 	debugInit()
-	# initCompression()
-	# compress(_startingHalfEdge)
+	initCompression()
+	compress(_startingHalfEdge)
 
 	# print(f'CLERS = {_clers}')
 	# print(f'Deltas: {len(_deltas)}')
@@ -683,7 +766,7 @@ def main():
 
 	debugPrintInfos()
 	
-	# initDecompression()
+	initDecompression()
 	# decompress()
 
 	debugEnd()
