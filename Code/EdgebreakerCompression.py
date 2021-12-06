@@ -25,7 +25,7 @@ from pstats import Stats, SortKey
 
 _doProfiling = False				# Do some profiling
 
-_debug = True						# True if you want to enable color changes and delay between draw calls
+_debug = False						# True if you want to enable color changes and delay between draw calls
 _debugPrint = False					# True if you want to enable debug prints
 
 _debugDelayPerFrame = 0.01			# Delay between draw calls
@@ -311,13 +311,16 @@ def debugChangeTriangleColor(halfEdgeId):
 
 
 def debugPrintInfos():
-	print(f'\n##########   DEBUG   ##########')
+	if not _debugPrint:
+		return
+	
+	debugPrint(f'\n##########   DEBUG   ##########')
 	nbChar = len(_clers)
 
-	print(f'nbTriangles = {len(_heMesh.triangles)}')
-	print(f'nbChar = {nbChar}')
+	debugPrint(f'nbTriangles = {len(_heMesh.triangles)}')
+	debugPrint(f'nbChar = {nbChar}')
 
-	print(f'nbHalfEdges = {_halfEdges.size}')
+	debugPrint(f'nbHalfEdges = {_halfEdges.size}')
 	
 	C = _clers.count("C")
 	L = _clers.count("L")
@@ -325,21 +328,21 @@ def debugPrintInfos():
 	R = _clers.count("R")
 	S = _clers.count("S")
 
-	print(f'nbVertices = {len(_heMesh.vertices)}')
-	print(f'Identified as new during compression: {2 + C + L + E + R + S}/{nbChar}')
+	debugPrint(f'nbVertices = {len(_heMesh.vertices)}')
+	debugPrint(f'Identified as new during compression: {2 + C + L + E + R + S}/{nbChar}')
 
-	print(f'C = {C}')
-	print(f'L = {L}')
-	print(f'E = {E}')
-	print(f'R = {R}')
-	print(f'S = {S}')
+	debugPrint(f'C = {C}')
+	debugPrint(f'L = {L}')
+	debugPrint(f'E = {E}')
+	debugPrint(f'R = {R}')
+	debugPrint(f'S = {S}')
 
 	borderVertexCounter = 0
 	for he in _heMesh.half_edges:
 		if he.is_boundary():
 			borderVertexCounter += 1
-	print(f'Border vertices: {borderVertexCounter}')
-	print(f'#######  END OF DEBUG   #######\n')
+	debugPrint(f'Border vertices: {borderVertexCounter}')
+	debugPrint(f'#######  END OF DEBUG   #######\n')
 
 
 # ------------------------------------------------------------
@@ -377,11 +380,11 @@ def initCompression():
 	second = 1
 	third = 2
 
-	print("\n\n\nHalf edges:")
-	print(f'first = {first}, HE = {_halfEdges[first]}')
-	print(f'second = {second}, HE = {_halfEdges[second]}')
-	print(f'third = {third}, HE = {_halfEdges[third]}')
-	print("\n\n\n")
+	debugPrint("\nHalf edges:")
+	debugPrint(f'first = {first}, HE = {_halfEdges[first]}')
+	debugPrint(f'second = {second}, HE = {_halfEdges[second]}')
+	debugPrint(f'third = {third}, HE = {_halfEdges[third]}')
+	debugPrint("\n")
 
 	# First vertex position
 	addPosToDeltas(first)
@@ -462,11 +465,28 @@ def compressRecursive(halfEdgeId = 2):
 					halfEdgeId = getLeftCornerHeId(halfEdgeId)	# When the right triangles are done, continue with the left triangles
 
 
-def compress():
+# ------------------------------------------------------------
+# ONLY "PUBLIC" FUNCTION (TO IMPORT)
+# ------------------------------------------------------------
+
+def compress(mesh, debug = False):
+	global _heMesh, _debugPrint
+
+	_debugPrint = debug
+
 	print(f'Edgebreaker compression starting at: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
+
+	_heMesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(mesh)
+	
+	debugInit()
+
 
 	initCompression()
 	compressRecursive()
+
+	debugPrintInfos()
+
+	debugEnd()
 
 	print(f'Edgebreaker compression ending at: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
 
@@ -493,25 +513,22 @@ def doProfiling():
 
 
 def main():
-	global _heMesh
+	global _debug
 
-	print(f'\n\n\n\n\nRunning MAIN from EdgeBreaker.py')
+	_debug = False
+
+	print(f'\n\n\n\n\nRunning MAIN from EdgeBreakerCompression.py\n')
 	mesh = open3d.io.read_triangle_mesh("Models/Sphere.obj")
 	# Quantization.quantizeVertices(mesh, 4)
-	_heMesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(mesh)
 	
-	debugInit()
-	
-	clers, deltas, normals = compress()
+	clers, deltas, normals = compress(mesh, False)
 
 	# print(f'CLERS = {clers}')
 	# print(f'Deltas: {len(deltas)}')
 	# for v in _deltas:
 	# 	print(v)
 
-	debugPrintInfos()
-
-	debugEnd()
+	print(f'\n\n\n\n')
 
 	return 0
 
