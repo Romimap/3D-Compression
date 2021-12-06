@@ -6,6 +6,7 @@ https://www.cs.cmu.edu/~alla/edgebreaker_simple.pdf
 '''
 
 import cProfile
+from os import read
 import numpy
 import open3d
 import sys
@@ -424,7 +425,7 @@ def initCompression():
 
 
 def compress(halfEdgeId):
-	global _deltas, _clers, _previousHeId
+	global _clers, _previousHeId
 
 	while True:
 		if halfEdgeId == -1:
@@ -507,6 +508,173 @@ def compress(halfEdgeId):
 # Edgebreaker decompression part
 # ------------------------------------------------------------
 
+_V = []
+_O = []
+_G = []
+
+_T = 0
+_N = 2
+
+_deltasIndex = 0
+_clersIndex = 0
+
+
+def readDeltas():
+	global _deltasIndex
+
+	delta = _deltas[_deltasIndex]
+	_deltasIndex += 1
+	return delta
+
+
+def readClers():
+	global _clersIndex
+
+	letter = _clers[_clersIndex]
+	_clersIndex += 1
+	return letter
+
+
+def next(c):
+	if c % 3 == 2:
+		return c - 2
+	else:
+		return c + 1
+
+	
+def previous(c):
+	if c % 3 == 0:
+		return c + 2
+	else:
+		return c - 1
+
+
+def triangle(c):
+	return int(c / 3)
+
+
+def addVectors3D(v1, v2):
+	return [v1[0] + v2[0], v1[1] + v2[1], v1[2] + v2[2]]
+
+
+def decompressConnectivity(c):
+	global _V, _O, _T, _N
+
+	while True:
+		_T += 1
+		_O[c], _O[3 * _T] = 3 * _T, c
+		_V[3 * _T + 1], _V[3 * _T + 2] = _V[previous(c)], _V[next(c)]
+		c = next(_O[c])
+
+		letter = readClers()
+		cn = next(c)
+
+		if letter == 'C' or letter == 'c':
+			_O[cn] = -1
+			_N += 1
+			_V[3 * _T] = _N
+
+		elif letter == 'L' or letter == 'l':
+			_O[cn] = -2
+			zip(cn)
+			
+		elif letter == 'R' or letter == 'r':
+			_O[c] = -2
+			c = cn
+
+		elif letter == 'S' or letter == 's':
+			decompressConnectivity(c)
+			c = cn
+
+		elif letter == 'E' or letter == 'e':
+			_O[c] = -2
+			_O[cn] = -2
+			zip(cn)
+			return
+
+
+def zip(c):
+	global _V, _O
+
+	b = next(c)
+
+	while _O[b] >= 0:
+		b = next(_O[b])
+	
+	if _O[b] != -1:
+		return
+	_O[c], _O[b] = b, c
+
+	a = previous(c)
+	_V[previous(a)] = _V[previous(b)]
+
+	while _O[a] >= 0 and b != a:
+		a = previous(_O[a])
+		_V[previous(a)] = _V[previous(b)]
+	
+	c = previous(c)
+
+	while _O[c] >= 0 and c != b:
+		c = previous(_O[c])
+	
+	if _O[c] == -2:
+		zip(c)
+
+
+def decompressVertices(c):
+	global _G, _N
+
+	while True:
+		flag(triangle(c))
+		if isMarked(_V[c]):
+			_N += 1
+			_G[_N] = _G # TODO: continue
+
+
+def initDecompression():
+	global _V, _O, _G, _T, _N, _marked, _flagged
+
+	# Initialize arrays
+	verticesCount = 2 + _clers.count('C') + _clers.count('L') + _clers.count('E') + _clers.count('R') + _clers.count('S')
+	trianglesCount = len(_clers)
+	halfEdgesCount = 3 * trianglesCount
+
+	print(f'_vertices: {verticesCount}')
+	print(f'_triangles: {trianglesCount}')
+	print(f'_halfEdges: {halfEdgesCount}')
+
+	_V = [0] * halfEdgesCount
+	_V[1], _V[2] = 1, 2
+
+	_O = [-3] * halfEdgesCount
+	_O[0], _O[2] = -1, -1
+
+	_T = 0
+	_N = 2
+
+	decompressConnectivity(1)
+
+	_marked = [False] * verticesCount
+	_flagged = [False] * trianglesCount
+
+	_G = [[0, 0, 0]] * verticesCount
+	_G[0] = readDeltas()
+	_G[1] = addVectors3D(_G[0], readDeltas())
+	_G[2] = addVectors3D(_G[1], readDeltas())
+	_N = 2
+
+	mark(0)
+	mark(1)
+	mark(2)
+	flag(0)
+
+	decompressVertices(_O[1])
+
+
+# ------------------------------------------------------------
+# Edgebreaker decompression test 2
+# ------------------------------------------------------------
+
 _verticesId = []			# V
 _verticesLocation = []		# G
 _oppositeHalfEdgeId = []	# O
@@ -575,7 +743,7 @@ def initDecompression():
 
 
 # ------------------------------------------------------------
-# Edgebreaker decompression test
+# Edgebreaker decompression test 1
 # ------------------------------------------------------------
 
 ## TRIANGLE DATACLASS
