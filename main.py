@@ -10,7 +10,7 @@ import Code
 import copy
 import math
 
-from Code.Quantization import quantizeVertices, quantizedPositionsToBitstring, normalsToBitstring, printBitString
+from Code.Quantization import quantizeVertices, quantizedPositionsToBitstring, normalsToBitstring, printBitString, simplify
 from Code.Quantization import readVerticesBits
 from Code.Encryption import scramble, xorifyNormals
 from Code.Encryption import unscramble
@@ -20,7 +20,7 @@ import cProfile
 from pstats import Stats, SortKey
 
 k = 10
-MODELNAME = "suzanne"
+MODELNAME = "bunny_normals"
 
 def interpolate (A, B, C):
 	n = A + B + C
@@ -111,7 +111,7 @@ def objExporter(filepath, mesh):
 
 
 def testAnimation():
-	mesh = open3d.io.read_triangle_mesh("Models/bunny.obj")
+	mesh = open3d.io.read_triangle_mesh("Models/"+ MODELNAME + ".obj")
 	mesh.compute_vertex_normals()
 	mesh.paint_uniform_color([0.8, 0.8, 0.8])
 
@@ -148,7 +148,7 @@ def testAnimation():
 def testFunction():
 	print("Testing IO for meshes ...")
 	#mesh = open3d.io.read_triangle_mesh("Models/suzanne.obj")
-	mesh = objImporter("./Models/Sphere.obj")
+	mesh = objImporter("Models/"+ MODELNAME + ".obj")
 	#mesh.compute_vertex_normals()
 	#mesh.compute_triangle_normals()
 	meshQuantified = copy.deepcopy(mesh)
@@ -288,15 +288,23 @@ def readFile(filename):
 
 def main():
 	#testFunction()
-	
-	bitstring = cryptoCompress('password', './Models/' + MODELNAME + '.obj')
-	printBitString(bitstring)
-	writeFile(bitstring, MODELNAME + ".rfcp")
-	bitstring = readFile(MODELNAME + ".rfcp")
-	printBitString(bitstring)
-	mesh = cryptoExcract('password', bitstring)
+		
+	#bitstring = cryptoCompress('password', './Models/' + MODELNAME + '.obj')
+	#printBitString(bitstring)
+	#writeFile(bitstring, MODELNAME + ".rfcp")
+	#bitstring = readFile(MODELNAME + ".rfcp")
+	#printBitString(bitstring)
+	#mesh = cryptoExcract('password', bitstring)
 
+	mesh = open3d.io.read_triangle_mesh("Models/" + MODELNAME + ".obj")
+	quantizeVertices(mesh, 10)
+	simplify(mesh)
+	mesh.compute_vertex_normals()
+	mesh.compute_triangle_normals()
 	open3d.visualization.draw_geometries([mesh])
+	heMesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(mesh)
+	print("done")
+
 
 	return 0
 

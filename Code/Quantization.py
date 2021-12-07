@@ -1,3 +1,4 @@
+from numpy.lib.function_base import average
 import Code.bcolors
 import sys
 import os
@@ -11,7 +12,6 @@ import random
 from codecs import decode
 
 headerSize = 228
-
 
 # https://newbedev.com/how-to-convert-a-binary-string-into-a-float-value
 def float_to_bin(num):
@@ -50,6 +50,105 @@ def closestNormalID(kdFibSphere, normal):
 def remap(value, minFrom, maxFrom, minTo, maxTo):
     return ((value - minFrom) / (maxFrom - minFrom)) * (maxTo - minTo) + minTo
 
+def simplify(mesh):
+    meshTri = numpy.asarray(mesh.triangles)
+    meshPos = numpy.asarray(mesh.vertices)
+
+    addedvertices = {}
+    vertices = []
+    triangles = []
+    trianglesFixed = []
+
+    addedEdges = {}
+    addedTris = {}
+
+    for tri in meshTri:
+        meshPosA = meshPos[(tri[0])]
+        cellstrA = str(meshPosA)
+
+        meshPosB = meshPos[(tri[1])]
+        cellstrB = str(meshPosB)
+        
+        meshPosC = meshPos[(tri[2])]
+        cellstrC = str(meshPosC)
+
+        if cellstrA != cellstrB and cellstrB != cellstrC and cellstrC != cellstrA:
+            triarray = [cellstrA, cellstrB, cellstrC]
+            triarray.sort()
+            tristr = ''.join(triarray)
+            if tristr not in addedTris:
+                if cellstrA not in addedvertices: 
+                    addedvertices[cellstrA] = len(vertices)
+                    vertices.append(meshPosA)
+                if cellstrB not in addedvertices: 
+                    addedvertices[cellstrB] = len(vertices)
+                    vertices.append(meshPosB)
+                if cellstrC not in addedvertices: 
+                    addedvertices[cellstrC] = len(vertices)
+                    vertices.append(meshPosC)
+                
+                triangles.append(numpy.array([addedvertices[cellstrA], addedvertices[cellstrB], addedvertices[cellstrC]]))
+                addedTris[tristr] = 0 #value does not matter, we only need the key
+                #print(edgeAB)
+
+                edgeAB = cellstrA + " " + cellstrB
+                if cellstrA > cellstrB: edgeAB = cellstrB + " " + cellstrA
+                edgeBC = cellstrB + " " + cellstrC
+                if cellstrB > cellstrC: edgeBC = cellstrC + " " + cellstrB
+                edgeCA = cellstrC + " " + cellstrA
+                if cellstrC > cellstrA: edgeCA = cellstrA + " " + cellstrC
+
+                if edgeAB in addedEdges: addedEdges[edgeAB] = addedEdges[edgeAB] + 1
+                else: addedEdges[edgeAB] = 1
+                if edgeBC in addedEdges: addedEdges[edgeBC] = addedEdges[edgeBC] + 1
+                else: addedEdges[edgeBC] = 1
+                if edgeCA in addedEdges: addedEdges[edgeCA] = addedEdges[edgeCA] + 1
+                else: addedEdges[edgeCA] = 1
+
+    
+    for tri in triangles:
+        meshPosA = vertices[(tri[0])]
+        cellstrA = str(meshPosA)
+
+        meshPosB = vertices[(tri[1])]
+        cellstrB = str(meshPosB)
+        
+        meshPosC = vertices[(tri[2])]
+        cellstrC = str(meshPosC)
+
+        edgeAB = cellstrA + " " + cellstrB
+        if cellstrA > cellstrB: edgeAB = cellstrB + " " + cellstrA
+        edgeBC = cellstrB + " " + cellstrC
+        if cellstrB > cellstrC: edgeBC = cellstrC + " " + cellstrB
+        edgeCA = cellstrC + " " + cellstrA
+        if cellstrC > cellstrA: edgeCA = cellstrA + " " + cellstrC
+
+        add = True
+        if addedEdges[edgeAB] > 2:
+            if addedEdges[edgeBC] == 1 or addedEdges[edgeCA] == 1:
+                add = False
+
+        if addedEdges[edgeBC] > 2:
+            if addedEdges[edgeAB] == 1 or addedEdges[edgeCA] == 1:
+                add = False
+
+        if addedEdges[edgeCA] > 2:
+            if addedEdges[edgeBC] == 1 or addedEdges[edgeAB] == 1:
+                add = False
+
+        if add:
+            trianglesFixed.append(tri)
+        else:
+            print ("ignoring " + cellstrA + ", " + cellstrB + ", " + cellstrC)
+
+
+    mesh.triangles = open3d.utility.Vector3iVector(trianglesFixed)
+    mesh.vertices = open3d.utility.Vector3dVector(vertices)
+    
+    print (mesh.triangles)
+    print (numpy.asarray(mesh.triangles))
+    print (mesh.vertices)
+    print (numpy.asarray(mesh.vertices))
 
 #quantize vertices, returning their bitstream header
 #bits out format : k(4), vertexnb(32), minx(32), miny(32), minz(32), maxx(32), maxy(32), maxz(32), v1(3 * 2^k), v2(3 * 2^k), ... , vn(3 * 2^k)
@@ -79,12 +178,12 @@ def quantizeVertices(mesh, k):
         if vertex[1] < min[1]: min[1] = vertex[1]
         if vertex[2] < min[2]: min[2] = vertex[2]
 
-    bitstring += float_to_bin(numpy.float64(min[0]))
-    bitstring += float_to_bin(numpy.float64(min[1]))
-    bitstring += float_to_bin(numpy.float64(min[2]))
-    bitstring += float_to_bin(numpy.float64(max[0]))
-    bitstring += float_to_bin(numpy.float64(max[1]))
-    bitstring += float_to_bin(numpy.float64(max[2]))
+    bitstring += float_to_bin(numpy.float32(min[0]))
+    bitstring += float_to_bin(numpy.float32(min[1]))
+    bitstring += float_to_bin(numpy.float32(min[2]))
+    bitstring += float_to_bin(numpy.float32(max[0]))
+    bitstring += float_to_bin(numpy.float32(max[1]))
+    bitstring += float_to_bin(numpy.float32(max[2]))
 
     #Normalize coordinates into a unit AABB
     for vertex in vertices:
@@ -101,6 +200,8 @@ def quantizeVertices(mesh, k):
         vertex[0] = x
         vertex[1] = y
         vertex[2] = z
+
+    
 
     return bitstring
 
