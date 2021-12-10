@@ -55,18 +55,18 @@ _clers = ""					# String storing the CLERS steps of the EdgeBreaker algorithm's 
 _deltas = []				# List of 3D points/vectors storing the first points and the correction vectors
 _normals = []				# TODO
 
-_marked = []				# List of bool indicating whether a vertex has already been visited: M in the paper
-_flagged = []				# List of bool indicating whether a triangle has already been visited: U in the paper
+_M = []						# List of bool indicating whether a vertex has already been visited
+_U = []						# List of bool indicating whether a triangle has already been visited
 
 
 ## EDGEBREAKER DECOMPRESSION SPECIFIC
 
-_V = []
-_O = []
-_G = []
+_V = []						# Vertices id of each corner
+_O = []						# Opposite corner id of each corner
+_G = []						# Geometry (position) of each vertex
 
-_T = 0
-_N = 2
+_T = 0						# Current triangle id
+_N = 2						# Current vertex id
 
 _deltasIndex = 0
 _clersIndex = 0
@@ -112,6 +112,10 @@ def triangle(c):
 
 ## VECTORS
 
+def oppositeVector(v):
+	return [-v[0], -v[1], -v[2]]
+
+
 def addVectors3D(v1, v2):
 	return [v1[0] + v2[0], v1[1] + v2[1], v1[2] + v2[2]]
 
@@ -138,46 +142,6 @@ def readClers():
 	letter = _clers[_clersIndex]
 	_clersIndex += 1
 	return letter
-
-
-# ------------------------------------------------------------
-# FLAGS
-# ------------------------------------------------------------
-
-## MARKS
-
-def mark(c):
-	global _marked
-
-	if c != -1:
-		_marked[_V(c)] = True
-
-
-def isMarked(c):
-	global _marked
-
-	if c == -1:
-		return True
-	else:
-		return _marked[_V(c)]
-
-
-## FLAGS
-
-def flag(c):
-	global _flagged
-
-	if c != -1:
-		_flagged[triangle(c)] = True
-
-
-def isFlagged(c):
-	global _flagged
-	
-	if c == -1:
-		return True
-	else:
-		return _flagged[triangle(c)]
 
 
 # ------------------------------------------------------------
@@ -288,7 +252,7 @@ def debugPrintInfos():
 # ------------------------------------------------------------
 
 def decompressConnectivity(c):
-	global _V, _O, _T, _N
+	global _V, _O, _G, _T, _N, _M, _U
 
 	while True:
 		_T += 1
@@ -324,7 +288,7 @@ def decompressConnectivity(c):
 
 
 def zip(c):
-	global _V, _O
+	global _V, _O, _G, _T, _N, _M, _U
 
 	b = next(c)
 
@@ -352,17 +316,32 @@ def zip(c):
 
 
 def decompressVertices(c):
-	global _G, _N
+	global _V, _O, _G, _T, _N, _M, _U
 
 	while True:
-		flag(triangle(c))
-		if isMarked(_V[c]):
+		_U[triangle(c)] = True
+		if _M[_V[c]] == False:
 			_N += 1
-			_G[_N] = _G # TODO: continue
+			_G[_N] = addVectors3D(addVectors3D(addVectors3D(_G[_V[previous(c)]], _G[_V[next(c)]]), oppositeVector(_G[_V[_O[c]]])), readDeltas())
+			_M[_V[c]] = True
+			c = right(c)
+		else:
+			if _U[triangle(right(c))] == True:
+				if _U[triangle(left(c))] == True:
+					return
+				else:
+					c = left(c)
+			else:
+				if _U[triangle(left(c))] == True:
+					c = right(c)
+				else:
+					decompressVertices(right(c))
+					c = left(c)
+
 
 
 def initDecompression():
-	global _V, _O, _G, _T, _N, _marked, _flagged
+	global _V, _O, _G, _T, _N, _M, _U
 
 	# Initialize arrays
 	verticesCount = 2 + _clers.count('C') + _clers.count('L') + _clers.count('E') + _clers.count('R') + _clers.count('S')
@@ -384,8 +363,8 @@ def initDecompression():
 
 	decompressConnectivity(1)
 
-	_marked = [False] * verticesCount
-	_flagged = [False] * trianglesCount
+	_M = [False] * verticesCount
+	_U = [False] * trianglesCount
 
 	_G = [[0, 0, 0]] * verticesCount
 	_G[0] = readDeltas()
@@ -393,12 +372,43 @@ def initDecompression():
 	_G[2] = addVectors3D(_G[1], readDeltas())
 	_N = 2
 
-	mark(0)
-	mark(1)
-	mark(2)
-	flag(0)
+	_M[0] = True
+	_M[1] = True
+	_M[2] = True
+	_U[0] = True
 
 	decompressVertices(_O[1])
+
+
+# ------------------------------------------------------------
+# ONLY "PUBLIC" FUNCTION (TO IMPORT)
+# ------------------------------------------------------------
+
+def decompress(clers, deltas, normals, debug = False):
+	global _debugPrint
+
+	_debugPrint = debug
+
+	print(f'Edgebreaker decompression starting at: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
+	
+	debugInit()
+
+	_clers = clers
+	_deltas = deltas
+	_normals = normals
+
+	initDecompression()
+	# decompressRecursive()
+	mesh = None # TODO: replace by 'mesh = recreateMesh()'
+	# mesh = recreateMesh()
+
+	debugPrintInfos()
+
+	debugEnd()
+
+	print(f'Edgebreaker decompression ending at: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
+
+	return mesh
 
 
 # ------------------------------------------------------------
@@ -421,29 +431,14 @@ def doProfiling():
 
 
 def main():
-	global _heMesh
-
-	print(f'\n\n\n\n\nRunning MAIN from EdgeBreaker.py')
-	print(f'Starting at: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
-	mesh = open3d.io.read_triangle_mesh("Models/complex_shape_2.obj")
-	# Quantization.quantizeVertices(mesh, 4)
-	_heMesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(mesh)
+	print(f'\n\n\n\n\nRunning MAIN from EdgeBreakerDecompression.py')
 	
-	debugInit()
-	initCompression()
-	compress(_startingHalfEdge)
+	mesh = decompress(None, None, None)
 
-	# print(f'CLERS = {_clers}')
-	# print(f'Deltas: {len(_deltas)}')
+	# print(f'CLERS = {clers}')
+	# print(f'Deltas: {len(deltas)}')
 	# for v in _deltas:
 	# 	print(v)
-
-	debugPrintInfos()
-	
-	initDecompression()
-	# decompress()
-
-	debugEnd()
 
 	return 0
 
