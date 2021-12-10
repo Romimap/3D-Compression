@@ -28,10 +28,10 @@ _doProfiling = False				# Do some profiling
 _debug = False						# True if you want to enable color changes and delay between draw calls
 _debugPrint = False					# True if you want to enable debug prints
 
-_debugDelayPerFrame = 0.01			# Delay between draw calls
+_debugDelayPerFrame = 10			# Delay between draw calls
 
 _debugTriangleColor = [240, 0, 0]	# The current triangle color for debug-drawing triangles (to use, divide by 255)
-_debugColorOffset = 24				# For each triangle, 24 will be added or removed from one of the RGB component
+_debugColorOffset = 80				# For each triangle, 24 will be added or removed from one of the RGB component
 _debugRGBIndex = 1					# RGB index, 0 = R, 1 = G, 2 = B
 _debugRGBIncrease = True			# When true, we add _debugColorOffset for each triangle, else we subtract _debugColorOffset
 
@@ -77,36 +77,6 @@ def getVertexId(halfEdgeId):
 	return _halfEdges[halfEdgeId].vertex_indices[0]
 
 
-def getNextVertexId(halfEdgeId):
-	if halfEdgeId == -1:
-		return -1
-	return getVertexId(getNextHeId(halfEdgeId))
-
-
-def getPreviousVertexId(halfEdgeId):
-	if halfEdgeId == -1:
-		return -1
-	return getVertexId(getPreviousHeId(halfEdgeId))
-
-
-def getOppositeVertexId(halfEdgeId):
-	if halfEdgeId == -1:
-		return -1
-	return getVertexId(getOppositeCornerHeId(halfEdgeId))
-
-
-def getLeftVertexId(halfEdgeId):
-	if halfEdgeId == -1:
-		return -1
-	return getVertexId(getLeftCornerHeId(halfEdgeId))
-
-
-def getRightVertexId(halfEdgeId):
-	if halfEdgeId == -1:
-		return -1
-	return getVertexId(getRightCornerHeId(halfEdgeId))
-
-
 ## HALF-EDGES
 
 def getHalfEdge(halfEdgeId):
@@ -143,7 +113,34 @@ def getLeftCornerHeId(halfEdgeId):
 	return getPreviousHeId(getTwinHeId(halfEdgeId))
 
 
+## VERTEX POSITION
+
+def getVertexPosFromVertexId(vertexId):
+	return _vertices[vertexId]
+
+
+def getVertexPosFromHeId(halfEdgeId):
+	return _vertices[getVertexId(halfEdgeId)]
+
+
+## HALF-EDGES
+
+def debugHeInfo(halfEdgeId):
+	fromVertex = _halfEdges[halfEdgeId].vertex_indices[0]
+	toVertex = _halfEdges[halfEdgeId].vertex_indices[1]
+	fromPos = getVertexPosFromVertexId(_halfEdges[halfEdgeId].vertex_indices[0])
+	toPos = getVertexPosFromVertexId(_halfEdges[halfEdgeId].vertex_indices[1])
+	return f'HE id = {halfEdgeId}, from ({fromVertex}) {fromPos} to ({toVertex}) {toPos}'
+
+
 def getRightCornerHeId(halfEdgeId):
+	debugPrint(f'### getRightCornerHeId ###')
+	debugPrint(f'From: {debugHeInfo(halfEdgeId)}')
+	debugPrint(f'To: {debugHeInfo(getPreviousHeId(getTwinHeId(getPreviousHeId(halfEdgeId))))}')
+	debugPrint(f'Previous: {debugHeInfo(getPreviousHeId(halfEdgeId))}')
+	debugPrint(f'Previous twin: {debugHeInfo(getTwinHeId(getPreviousHeId(halfEdgeId)))}')
+	debugPrint(f'Previous twin previous: {debugHeInfo(getPreviousHeId(getTwinHeId(getPreviousHeId(halfEdgeId))))}')
+	debugPrint(f'### END OF getRightCornerHeId ###\n\n\n')
 	if halfEdgeId == -1:
 		return -1
 	return getPreviousHeId(getTwinHeId(getPreviousHeId(halfEdgeId)))
@@ -155,28 +152,6 @@ def getTriangleFromHeId(halfEdgeId):
 	if halfEdgeId == -1:
 		return -1
 	return _halfEdges[halfEdgeId].triangle_index
-
-
-## DISTANCE VECTORS
-
-def getDistanceVectorFromVerticesId(fromVertexId, toVertexId):
-	return _vertices[toVertexId] - _vertices[fromVertexId]
-
-
-def getDistanceVectorFromHeId(fromHeId, toHeId):
-	fromVertexId = getVertexId(fromHeId)
-	toVertexId = getVertexId(toHeId)
-	return getDistanceVectorFromVerticesId(fromVertexId, toVertexId)
-
-
-## VERTEX POSITION
-
-def getVertexPosFromVertexId(vertexId):
-	return _vertices[vertexId]
-
-
-def getVertexPosFromHeId(halfEdgeId):
-	return _vertices[getVertexId(halfEdgeId)]
 
 
 # ------------------------------------------------------------
@@ -220,6 +195,30 @@ def isFlagged(halfEdgeId):
 
 
 # ------------------------------------------------------------
+# CALCULATIONS
+# ------------------------------------------------------------
+
+## VECTORS
+
+def getDistanceVectorFromVerticesId(fromVertexId, toVertexId):
+	return _vertices[toVertexId] - _vertices[fromVertexId]
+
+
+def getDistanceVectorFromHeId(fromHeId, toHeId):
+	fromVertexId = getVertexId(fromHeId)
+	toVertexId = getVertexId(toHeId)
+	return getDistanceVectorFromVerticesId(fromVertexId, toVertexId)
+
+
+def oppositeVector(v):
+	return [-v[0], -v[1], -v[2]]
+
+
+def addVectors3D(v1, v2):
+	return [v1[0] + v2[0], v1[1] + v2[1], v1[2] + v2[2]]
+
+
+# ------------------------------------------------------------
 # DELTAS
 # ------------------------------------------------------------
 
@@ -231,12 +230,27 @@ def addPosToDeltas(halfEdgeId):
 	# debugPrint(f'# Add pos {pos}')
 
 
-def addVectorToDeltas(previousHalfEdgeId, halfEdgeId):
+def addDifferenceVectorToDeltas(previousHalfEdgeId, halfEdgeId):
 	global _deltas
 
 	vector = getDistanceVectorFromHeId(previousHalfEdgeId, halfEdgeId)
 	_deltas.append(vector)
-	# debugPrint(f'# Add vector {vector}')
+	debugPrint(f'# Add difference vector {vector}')
+	debugPrint(f'# From {getVertexPosFromHeId(previousHalfEdgeId)} to  {getVertexPosFromHeId(halfEdgeId)}\n')
+
+
+def addCorrectionVectorToDeltas(halfEdgeId):
+	global _deltas
+
+	hePos = getVertexPosFromHeId(halfEdgeId)
+	previousHePos = getVertexPosFromHeId(getPreviousHeId(halfEdgeId))
+	nextHePos = getVertexPosFromHeId(getNextHeId(halfEdgeId))
+	oppositeHePos = getVertexPosFromHeId(getOppositeCornerHeId(halfEdgeId))
+
+	correctionVector = addVectors3D(addVectors3D(addVectors3D(hePos, oppositeVector(previousHePos)), oppositeVector(nextHePos)), oppositeHePos)
+
+	_deltas.append(correctionVector)
+	# debugPrint(f'# Add correction vector {correctionVector}')
 
 
 # ------------------------------------------------------------
@@ -317,10 +331,10 @@ def debugPrintInfos():
 	debugPrint(f'\n##########   DEBUG   ##########')
 	nbChar = len(_clers)
 
-	debugPrint(f'nbTriangles = {len(_heMesh.triangles)}')
-	debugPrint(f'nbChar = {nbChar}')
+	debugPrint(f'  nbTriangles = {len(_heMesh.triangles)}')
+	debugPrint(f'? nbChar = {nbChar} (?= {(len(_heMesh.triangles) - 1)}')
 
-	debugPrint(f'nbHalfEdges = {_halfEdges.size}')
+	debugPrint(f'  nbHalfEdges = {_halfEdges.size}')
 	
 	C = _clers.count("C")
 	L = _clers.count("L")
@@ -328,20 +342,20 @@ def debugPrintInfos():
 	R = _clers.count("R")
 	S = _clers.count("S")
 
-	debugPrint(f'nbVertices = {len(_heMesh.vertices)}')
-	debugPrint(f'Identified as new during compression: {2 + C + L + E + R + S}/{nbChar}')
+	debugPrint(f'  nbVertices = {len(_heMesh.vertices)}')
+	debugPrint(f'? Identified as new during compression: {3 + C}/{len(_heMesh.vertices)}')
 
-	debugPrint(f'C = {C}')
-	debugPrint(f'L = {L}')
-	debugPrint(f'E = {E}')
-	debugPrint(f'R = {R}')
-	debugPrint(f'S = {S}')
+	debugPrint(f'? C = {C}')
+	debugPrint(f'? L = {L}')
+	debugPrint(f'? E = {E}')
+	debugPrint(f'? R = {R}')
+	debugPrint(f'? S = {S}')
 
 	borderVertexCounter = 0
 	for he in _heMesh.half_edges:
 		if he.is_boundary():
 			borderVertexCounter += 1
-	debugPrint(f'Border vertices: {borderVertexCounter}')
+	debugPrint(f'? Border vertices: {borderVertexCounter}')
 	debugPrint(f'#######  END OF DEBUG   #######\n')
 
 
@@ -370,42 +384,48 @@ def initData():
 
 
 # Initialize the EdgeBreaker algorithm by choosing the best fitting starting vertex in the first mesh's triangle
-def initCompression():
+def initCompression(): # TODO: redo add vectors (actually redo all according to paper)
 	global _startingHalfEdge, _previousHeId, _clers, _deltas
 
 	initData()
 	debugDrawAndWait()
 
-	first = 0
-	second = 1
-	third = 2
+	previous = getPreviousHeId(_startingHalfEdge)
+	next = getNextHeId(_startingHalfEdge)
 
 	debugPrint("\nHalf edges:")
-	debugPrint(f'first = {first}, HE = {_halfEdges[first]}')
-	debugPrint(f'second = {second}, HE = {_halfEdges[second]}')
-	debugPrint(f'third = {third}, HE = {_halfEdges[third]}')
+	debugPrint(f'previous = {getVertexId(previous)}, HE = {previous}, pos = {getVertexPosFromHeId(previous)}')
+	debugPrint(f'current = {getVertexId(_startingHalfEdge)}, HE = {_startingHalfEdge}, pos = {getVertexPosFromHeId(_startingHalfEdge)}')
+	debugPrint(f'next = {getVertexId(next)}, HE = {next}, pos = {getVertexPosFromHeId(next)}')
 	debugPrint("\n")
 
 	# First vertex position
-	addPosToDeltas(first)
+	addPosToDeltas(previous)
 	# Vector from first to second vertex
-	addVectorToDeltas(first, second)
+	addDifferenceVectorToDeltas(previous, _startingHalfEdge)
+	addDifferenceVectorToDeltas(_startingHalfEdge, next)
 
 	# Mark these vertices as "seen"
-	mark(first)
-	mark(second)
+	mark(previous)
+	mark(_startingHalfEdge)
+	mark(next)
+
+	# Mark triangle as "seen"
+	flag(_startingHalfEdge)
 
 	# Set previously visited half-edge
-	_previousHeId = second
+	_previousHeId = next
 
 	# Draw if debug mode is actived
-	debugChangeTriangleColor(first)
+	debugChangeTriangleColor(previous)
 	debugDrawAndWait()
-	debugChangeTriangleColor(second)
+	debugChangeTriangleColor(_startingHalfEdge)
+	debugDrawAndWait()
+	debugChangeTriangleColor(next)
 	debugDrawAndWait()
 
 
-def compressRecursive(halfEdgeId = 2):
+def compressRecursive(halfEdgeId):
 	global _clers, _previousHeId
 
 	while True:
@@ -424,41 +444,39 @@ def compressRecursive(halfEdgeId = 2):
 		fromTo = f'{getVertexId(_previousHeId)} → {vertexId}'
 
 		if not isMarked(halfEdgeId):							# 'C' configuration
-			debugPrint(f'{fromTo} Found C configuration')
+			debugPrint(f'{fromTo} Found C configuration in triangle {getTriangleFromHeId(halfEdgeId)}')
+			# addCorrectionVectorToDeltas(halfEdgeId)
+			addDifferenceVectorToDeltas(_previousHeId, halfEdgeId)
 			_clers += 'C'
-			addVectorToDeltas(_previousHeId, halfEdgeId)
 
 			mark(halfEdgeId)
 			_previousHeId = halfEdgeId
 			halfEdgeId = getRightCornerHeId(halfEdgeId)
+			debugPrint(f'Right corner = {getVertexPosFromHeId(halfEdgeId)}')
 
 		else:
 			if isFlagged(getRightCornerHeId(halfEdgeId)):	# isFlagged(i) == i triangle already seen
 				if isFlagged(getLeftCornerHeId(halfEdgeId)):	# 'E' configuration
-					debugPrint(f'{fromTo} Found E configuration')
+					debugPrint(f'{fromTo} Found E configuration in triangle {getTriangleFromHeId(halfEdgeId)}')
 					_clers += 'E'
-					addVectorToDeltas(_previousHeId, halfEdgeId)
 					return
 
 				else:											# 'R' configuration
-					debugPrint(f'{fromTo} Found R configuration')
+					debugPrint(f'{fromTo} Found R configuration in triangle {getTriangleFromHeId(halfEdgeId)}')
 					_clers += 'R'
-					addVectorToDeltas(_previousHeId, halfEdgeId)
 					_previousHeId = halfEdgeId
 					halfEdgeId = getLeftCornerHeId(halfEdgeId)
 
 			else:
 				if isFlagged(getLeftCornerHeId(halfEdgeId)):	# 'L' configuration
-					debugPrint(f'{fromTo} Found L configuration')
+					debugPrint(f'{fromTo} Found L configuration in triangle {getTriangleFromHeId(halfEdgeId)}')
 					_clers += 'L'
-					addVectorToDeltas(_previousHeId, halfEdgeId)
 					_previousHeId = halfEdgeId
 					halfEdgeId = getRightCornerHeId(halfEdgeId)
 
 				else:											# 'S' configuration
-					debugPrint(f'{fromTo} Found S configuration')
+					debugPrint(f'{fromTo} Found S configuration in triangle {getTriangleFromHeId(halfEdgeId)}')
 					_clers += 'S'
-					addVectorToDeltas(_previousHeId, halfEdgeId)
 					_previousHeId = halfEdgeId
 					compressRecursive(getRightCornerHeId(halfEdgeId))	# Create a branch for the right triangles
 					_previousHeId = halfEdgeId
@@ -482,7 +500,7 @@ def compress(mesh, debug = False):
 
 
 	initCompression()
-	compressRecursive()
+	compressRecursive(getOppositeCornerHeId(_startingHalfEdge))
 
 	debugPrintInfos()
 
@@ -515,18 +533,19 @@ def doProfiling():
 def main():
 	global _debug
 
-	_debug = False
+	_debug = True
+	doDebugPrint = True
 
 	print(f'\n\n\n\n\nRunning MAIN from EdgeBreakerCompression.py\n')
-	mesh = open3d.io.read_triangle_mesh("Models/Sphere.obj")
+	mesh = open3d.io.read_triangle_mesh("Models/cube2.obj")
 	# Quantization.quantizeVertices(mesh, 4)
 	
-	clers, deltas, normals = compress(mesh, False)
+	clers, deltas, normals = compress(mesh, doDebugPrint)
 
-	# print(f'CLERS = {clers}')
-	# print(f'Deltas: {len(deltas)}')
-	# for v in _deltas:
-	# 	print(v)
+	print(f'CLERS = {clers}')
+	print(f'Deltas: {len(deltas)}')
+	for v in deltas:
+		print(v)
 
 	print(f'\n\n\n\n')
 
