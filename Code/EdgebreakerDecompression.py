@@ -25,15 +25,10 @@ from pstats import Stats, SortKey
 
 _doProfiling = False				# Do some profiling
 
-_debug = True						# True if you want to enable color changes and delay between draw calls
+_debug = False						# True if you want to enable color changes and delay between draw calls
 _debugPrint = False					# True if you want to enable debug prints
 
 _debugDelayPerFrame = 0.01			# Delay between draw calls
-
-_debugTriangleColor = [240, 0, 0]	# The current triangle color for debug-drawing triangles (to use, divide by 255)
-_debugColorOffset = 24				# For each triangle, 24 will be added or removed from one of the RGB component
-_debugRGBIndex = 1					# RGB index, 0 = R, 1 = G, 2 = B
-_debugRGBIncrease = True			# When true, we add _debugColorOffset for each triangle, else we subtract _debugColorOffset
 
 _visualizer = None					# The visualizer (the window)
 _lastUpdateTime = -1				# Last visual update time in seconds
@@ -189,40 +184,26 @@ def debugDrawAndWait():
 			_visualizer.update_renderer()
 
 
-def debugChangeTriangleColor(halfEdgeId):
-	global _debugTriangleColor, _debugRGBIndex, _debugRGBIncrease, _heMesh
-
-	if _debug:
-		if _debugRGBIncrease and _debugTriangleColor[_debugRGBIndex] >= 240:
-			_debugTriangleColor[_debugRGBIndex] = 240
-			_debugRGBIncrease = False
-			_debugRGBIndex = (_debugRGBIndex - 1) % 3
-		elif not _debugRGBIncrease and _debugTriangleColor[_debugRGBIndex] == 0:
-			_debugTriangleColor[_debugRGBIndex] = 0
-			_debugRGBIncrease = True
-			_debugRGBIndex = (_debugRGBIndex + 2) % 3
-		
-		if _debugRGBIncrease:
-			_debugTriangleColor[_debugRGBIndex] += _debugColorOffset
-		else:
-			_debugTriangleColor[_debugRGBIndex] -= _debugColorOffset
-
-		triangleColor = [x / 255 for x in _debugTriangleColor]
-		# triangleColor = [random.randint(0, 255) / 255, random.randint(0, 255) / 255, random.randint(0, 255) / 255]
-
-		_heMesh.vertex_colors[getVertexId(halfEdgeId)] = triangleColor
-		# _heMesh.vertex_colors[getNextVertexId(halfEdgeId)] = triangleColor
-		# _heMesh.vertex_colors[getPreviousVertexId(halfEdgeId)] = triangleColor
-
-
 def debugPrintInfos():
-	print(f'\n##########   DEBUG   ##########')
+	if not _debugPrint:
+		return
+	
+	debugPrint(f'\n##########   DEBUG   ##########')
+	debugPrint(f'? Vertices geometry:')
+	for i in range(len(_G)):
+		debugPrint(f'{i} = {_G[i]}')
+
+	debugPrint(f'? Corners → Vertices id:')
+	for i in range(len(_V)):
+		debugPrint(f'{i} → {_V[i]}')
+
+
 	nbChar = len(_clers)
 
-	print(f'nbTriangles = {len(_heMesh.triangles)}')
-	print(f'nbChar = {nbChar}')
+	debugPrint(f'  nbTriangles = {len(_heMesh.triangles)}')
+	debugPrint(f'? nbChar = {nbChar}/{(len(_heMesh.triangles) - 1)}')
 
-	print(f'nbHalfEdges = {_halfEdges.size}')
+	debugPrint(f'  nbHalfEdges = {_halfEdges.size}')
 	
 	C = _clers.count("C")
 	L = _clers.count("L")
@@ -230,21 +211,21 @@ def debugPrintInfos():
 	R = _clers.count("R")
 	S = _clers.count("S")
 
-	print(f'nbVertices = {len(_heMesh.vertices)}')
-	print(f'Identified as new during compression: {2 + C + L + E + R + S}/{nbChar}')
+	debugPrint(f'  nbVertices = {len(_heMesh.vertices)}')
+	debugPrint(f'? Identified as new during compression: {3 + C}/{len(_heMesh.vertices)}')
 
-	print(f'C = {C}')
-	print(f'L = {L}')
-	print(f'E = {E}')
-	print(f'R = {R}')
-	print(f'S = {S}')
+	debugPrint(f'? C = {C}')
+	debugPrint(f'? L = {L}')
+	debugPrint(f'? E = {E}')
+	debugPrint(f'? R = {R}')
+	debugPrint(f'? S = {S}')
 
 	borderVertexCounter = 0
 	for he in _heMesh.half_edges:
 		if he.is_boundary():
 			borderVertexCounter += 1
-	print(f'Border vertices: {borderVertexCounter}')
-	print(f'#######  END OF DEBUG   #######\n')
+	debugPrint(f'? Border vertices: {borderVertexCounter}')
+	debugPrint(f'#######  END OF DEBUG   #######\n')
 
 
 # ------------------------------------------------------------
@@ -344,8 +325,8 @@ def initDecompression():
 	global _V, _O, _G, _T, _N, _M, _U
 
 	# Initialize arrays
-	verticesCount = 2 + _clers.count('C') + _clers.count('L') + _clers.count('E') + _clers.count('R') + _clers.count('S')
-	trianglesCount = len(_clers)
+	verticesCount = 3 + _clers.count('C')
+	trianglesCount = 1 + len(_clers)
 	halfEdgesCount = 3 * trianglesCount
 
 	print(f'_vertices: {verticesCount}')
@@ -385,7 +366,7 @@ def initDecompression():
 # ------------------------------------------------------------
 
 def decompress(clers, deltas, normals, debug = False):
-	global _debugPrint
+	global _clers, _deltas, _normals, _debugPrint
 
 	_debugPrint = debug
 
@@ -397,12 +378,17 @@ def decompress(clers, deltas, normals, debug = False):
 	_deltas = deltas
 	_normals = normals
 
+	print(f'CLERS = {_clers}')
+	print(f'Deltas: {len(_deltas)}')
+	for v in _deltas:
+		print(v)
+	print(f'\n\n\n\n')
+
 	initDecompression()
-	# decompressRecursive()
 	mesh = None # TODO: replace by 'mesh = recreateMesh()'
 	# mesh = recreateMesh()
 
-	debugPrintInfos()
+	# debugPrintInfos()
 
 	debugEnd()
 
@@ -431,9 +417,14 @@ def doProfiling():
 
 
 def main():
+	global _debug
+
+	_debug = False
+	doDebugPrint = True
+
 	print(f'\n\n\n\n\nRunning MAIN from EdgeBreakerDecompression.py')
 	
-	mesh = decompress(None, None, None)
+	mesh = decompress(None, None, None, doDebugPrint)
 
 	# print(f'CLERS = {clers}')
 	# print(f'Deltas: {len(deltas)}')

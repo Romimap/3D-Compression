@@ -521,7 +521,6 @@ def main():
 	print(f'Deltas: {len(deltas)}')
 	for v in deltas:
 		print(v)
-
 	print(f'\n\n\n\n')
 
 	return 0

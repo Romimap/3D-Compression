@@ -9,8 +9,8 @@ from EdgebreakerDecompression import decompress
 def main():
 	print(f'\n\n\n\n\nRunning MAIN from EdgeBreakerDemo.py')
 
-	mesh = open3d.io.read_triangle_mesh("Models/Sphere.obj")
-	clers, deltas, normals = compress(mesh, True)
+	mesh = open3d.io.read_triangle_mesh("Models/cube2.obj")
+	clers, deltas, normals = compress(mesh, False)
 
 	mesh = decompress(clers, deltas, normals, True)
 
