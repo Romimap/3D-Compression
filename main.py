@@ -1,14 +1,27 @@
+
+# ------------------------------------------------------------
+# Global librairies
+# ------------------------------------------------------------
+
+import bitarray
 import builtins
-import sys
-import os
+import copy
+import cProfile
+import math
 import numpy
 import open3d
-import bitarray
+import os
+import sys
 import time
 
+from pstats import Stats
+
+
+# ------------------------------------------------------------
+# Project code
+# ------------------------------------------------------------
+
 import Code
-import copy
-import math
 
 from Code.Quantization import quantizeVertices, quantizedPositionsToBitstring, normalsToBitstring, printBitString
 from Code.Quantization import readVerticesBits
@@ -16,11 +29,18 @@ from Code.Encryption import scramble, xorifyNormals
 from Code.Encryption import unscramble
 from Code.Huffman import makeCodebook
 
-import cProfile
-from pstats import Stats, SortKey
+
+# ------------------------------------------------------------
+# Global variables
+# ------------------------------------------------------------
 
 k = 10
 MODELNAME = "suzanne"
+
+
+# ------------------------------------------------------------
+# Functions
+# ------------------------------------------------------------
 
 def interpolate (A, B, C):
 	n = A + B + C
@@ -98,7 +118,8 @@ def objImporter(filepath):
 	#open3d.visualization.draw_geometries([mesh])
 
 	return mesh
-				
+
+
 def objExporter(filepath, mesh):
 	os.system('rm ' + filepath)
 	file = open(filepath, "a")
@@ -260,6 +281,7 @@ def cryptoCompress(password, filename):
 	
 	return bitstring
 
+
 #FOR A BITSTRING, RETURNS A MESH
 def cryptoExcract(password, bitstring):
 	mesh = objImporter("./Models/" + MODELNAME + ".obj") #NOTE: remove that
@@ -270,11 +292,13 @@ def cryptoExcract(password, bitstring):
 	mesh.vertex_normals = open3d.utility.Vector3dVector(normals)
 	return mesh
 
+
 #WRITES A FILE FROM A BITSTRING
 def writeFile(bitstring, filename):
 	bitArray = bitarray.bitarray([0 for _ in range(8-(len(bitstring)%8))] + list(map(int,bitstring)))
 	with open(filename,"wb+") as f:
 		bitArray.tofile(f)
+
 
 def readFile(filename):
 	bitstring = ''
@@ -285,6 +309,25 @@ def readFile(filename):
 
 	bitstring = bitstring[8:]
 	return bitstring
+
+
+# ------------------------------------------------------------
+# Main
+# ------------------------------------------------------------
+
+def doProfiling():
+	with cProfile.Profile() as pr:
+		main()
+	
+	with open('profiling_stats.txt', 'w') as stream:
+		stats = Stats(pr, stream=stream)
+		stats.strip_dirs()
+		stats.sort_stats('time')
+		stats.dump_stats('.prof_stats')
+		stats.print_stats()
+
+	return 0
+
 
 def main():
 	#testFunction()
@@ -300,17 +343,10 @@ def main():
 
 	return 0
 
+
 if __name__ == '__main__':
 	do_profiling = True
 	if do_profiling:
-		with cProfile.Profile() as pr:
-			main()
-		with open('profiling_stats.txt', 'w') as stream:
-			stats = Stats(pr, stream=stream)
-			stats.strip_dirs()
-			stats.sort_stats('time')
-			stats.dump_stats('.prof_stats')
-			stats.print_stats()
+		sys.exit(doProfiling())
 	else:
-		main()
-	sys.exit()
+		sys.exit(main())
