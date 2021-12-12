@@ -1,5 +1,7 @@
 *.txt
 *.prof_stats
+*.rfcp
+*.hman
 
 /bits/
 /.vscode/
