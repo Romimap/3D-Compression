@@ -6,15 +6,13 @@ https://www.cs.cmu.edu/~alla/edgebreaker_simple.pdf
 '''
 
 import cProfile
-from os import read
 import numpy
 import open3d
 import sys
 import time
 
-from dataclasses import dataclass
 from datetime import datetime
-from pstats import Stats, SortKey
+from pstats import Stats
 
 
 # ------------------------------------------------------------
@@ -210,7 +208,6 @@ def addPosToDeltas(halfEdgeId):
 
 	pos = getVertexPosFromHeId(halfEdgeId)
 	_deltas.append(pos)
-	# debugPrint(f'# Add pos {pos}')
 
 
 def addDifferenceVectorToDeltas(previousHalfEdgeId, halfEdgeId):
@@ -218,8 +215,6 @@ def addDifferenceVectorToDeltas(previousHalfEdgeId, halfEdgeId):
 
 	vector = getDistanceVectorFromHeId(previousHalfEdgeId, halfEdgeId)
 	_deltas.append(vector)
-	# debugPrint(f'# Add difference vector {vector}')
-	# debugPrint(f'# From {getVertexPosFromHeId(previousHalfEdgeId)} to  {getVertexPosFromHeId(halfEdgeId)}\n')
 
 
 def addCorrectionVectorToDeltas(halfEdgeId):
@@ -233,7 +228,6 @@ def addCorrectionVectorToDeltas(halfEdgeId):
 	correctionVector = addVectors3D(addVectors3D(addVectors3D(hePos, oppositeVector(previousHePos)), oppositeVector(nextHePos)), oppositeHePos)
 
 	_deltas.append(correctionVector)
-	# debugPrint(f'# Add correction vector {correctionVector}')
 
 
 # ------------------------------------------------------------

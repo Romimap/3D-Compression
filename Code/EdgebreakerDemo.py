@@ -6,13 +6,19 @@ from EdgebreakerCompression import compress
 from EdgebreakerDecompression import decompress
 
 
+def showMesh(mesh):
+	mesh.paint_uniform_color([0.6, 0.6, 0.6])
+	open3d.visualization.draw_geometries([mesh])
+
+
 def main():
 	print(f'\n\n\n\n\nRunning MAIN from EdgeBreakerDemo.py')
 
-	mesh = open3d.io.read_triangle_mesh("Models/cube2.obj")
-	clers, deltas, normals = compress(mesh, False)
+	originalMesh = open3d.io.read_triangle_mesh("Models/sphere.obj")
+	clers, deltas, normals = compress(originalMesh, False)
 
-	mesh = decompress(clers, deltas, normals, True)
+	decompressedMesh = decompress(clers, deltas, normals, False)
+	showMesh(decompressedMesh)
 
 	return 0
 

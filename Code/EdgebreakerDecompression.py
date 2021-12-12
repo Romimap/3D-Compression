@@ -6,15 +6,13 @@ https://www.cs.cmu.edu/~alla/edgebreaker_simple.pdf
 '''
 
 import cProfile
-from os import read
 import numpy
 import open3d
 import sys
 import time
 
-from dataclasses import dataclass
 from datetime import datetime
-from pstats import Stats, SortKey
+from pstats import Stats
 
 
 # ------------------------------------------------------------
@@ -189,48 +187,44 @@ def debugPrintInfos():
 		return
 	
 	debugPrint(f'\n##########   DEBUG   ##########')
-	debugPrint(f'? Vertices geometry:')
-	for i in range(len(_G)):
-		debugPrint(f'{i} = {_G[i]}')
+	# debugPrint(f'? Vertices geometry:')
+	# for i in range(len(_G)):
+	# 	debugPrint(f'{i} = {_G[i]}')
 
-	debugPrint(f'? Corners → Vertices id:')
-	for i in range(len(_V)):
-		debugPrint(f'{i} → {_V[i]}')
+	# debugPrint(f'? Corners → Vertices id:')
+	# for i in range(len(_V)):
+	# 	debugPrint(f'{i} → {_V[i]}')
 
-
-	nbChar = len(_clers)
-
-	debugPrint(f'  nbTriangles = {len(_heMesh.triangles)}')
-	debugPrint(f'? nbChar = {nbChar}/{(len(_heMesh.triangles) - 1)}')
-
-	debugPrint(f'  nbHalfEdges = {_halfEdges.size}')
-	
-	C = _clers.count("C")
-	L = _clers.count("L")
-	E = _clers.count("E")
-	R = _clers.count("R")
-	S = _clers.count("S")
-
-	debugPrint(f'  nbVertices = {len(_heMesh.vertices)}')
-	debugPrint(f'? Identified as new during compression: {3 + C}/{len(_heMesh.vertices)}')
-
-	debugPrint(f'? C = {C}')
-	debugPrint(f'? L = {L}')
-	debugPrint(f'? E = {E}')
-	debugPrint(f'? R = {R}')
-	debugPrint(f'? S = {S}')
-
-	borderVertexCounter = 0
-	for he in _heMesh.half_edges:
-		if he.is_boundary():
-			borderVertexCounter += 1
-	debugPrint(f'? Border vertices: {borderVertexCounter}')
+	debugPrint(f'? nbTriangles = {(len(_V) / 3)}/{(1 + len(_clers))}')
 	debugPrint(f'#######  END OF DEBUG   #######\n')
 
 
 # ------------------------------------------------------------
 # Edgebreaker decompression part
 # ------------------------------------------------------------
+
+def recreateMesh():
+	triangles = []
+	triangle = []
+
+	i = 0
+	for vertexId in _V:
+		i += 1
+		triangle.append(vertexId)
+		if i == 3:
+			i = 0
+			triangles.append(triangle)
+			triangle = []
+
+	vertices = open3d.utility.Vector3dVector(_G)
+	triangles = open3d.utility.Vector3iVector(triangles)
+
+	mesh = open3d.geometry.TriangleMesh(vertices, triangles)
+	mesh.compute_vertex_normals()
+	mesh.compute_triangle_normals()
+
+	return mesh
+
 
 def decompressConnectivity(c):
 	global _V, _O, _G, _T, _N, _M, _U
@@ -329,9 +323,9 @@ def initDecompression():
 	trianglesCount = 1 + len(_clers)
 	halfEdgesCount = 3 * trianglesCount
 
-	print(f'_vertices: {verticesCount}')
-	print(f'_triangles: {trianglesCount}')
-	print(f'_halfEdges: {halfEdgesCount}')
+	debugPrint(f'_vertices: {verticesCount}')
+	debugPrint(f'_triangles: {trianglesCount}')
+	debugPrint(f'_halfEdges: {halfEdgesCount}')
 
 	_V = [0] * halfEdgesCount
 	_V[1], _V[2] = 1, 2
@@ -378,17 +372,11 @@ def decompress(clers, deltas, normals, debug = False):
 	_deltas = deltas
 	_normals = normals
 
-	print(f'CLERS = {_clers}')
-	print(f'Deltas: {len(_deltas)}')
-	for v in _deltas:
-		print(v)
-	print(f'\n\n\n\n')
-
 	initDecompression()
-	mesh = None # TODO: replace by 'mesh = recreateMesh()'
-	# mesh = recreateMesh()
 
-	# debugPrintInfos()
+	mesh = recreateMesh()
+
+	debugPrintInfos()
 
 	debugEnd()
 
@@ -425,11 +413,6 @@ def main():
 	print(f'\n\n\n\n\nRunning MAIN from EdgeBreakerDecompression.py')
 	
 	mesh = decompress(None, None, None, doDebugPrint)
-
-	# print(f'CLERS = {clers}')
-	# print(f'Deltas: {len(deltas)}')
-	# for v in _deltas:
-	# 	print(v)
 
 	return 0
 
