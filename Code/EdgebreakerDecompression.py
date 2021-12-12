@@ -203,6 +203,43 @@ def debugPrintInfos():
 # Edgebreaker decompression part
 # ------------------------------------------------------------
 
+def zipCorner(c):
+	global _V, _O, _G, _T, _N, _M, _U, zipCount
+
+	b = next(c)
+
+	while _O[b] >= 0:
+		b = next(_O[b])
+	
+	if _O[b] != -1:
+		return None
+	_O[c], _O[b] = b, c
+
+	a = previous(c)
+	_V[previous(a)] = _V[previous(b)]
+
+	while _O[a] >= 0 and b != a:
+		a = previous(_O[a])
+		_V[previous(a)] = _V[previous(b)]
+	
+	c = previous(c)
+
+	while _O[c] >= 0 and c != b:
+		c = previous(_O[c])
+	
+	if _O[c] == -2:
+		return c
+	else:
+		return None
+
+
+def zip(c):
+	while True:
+		c = zipCorner(c)
+		if c == None:
+			return
+
+
 def recreateMesh():
 	triangles = []
 	triangle = []
@@ -260,34 +297,6 @@ def decompressConnectivity(c):
 			_O[cn] = -2
 			zip(cn)
 			return
-
-
-def zip(c):
-	global _V, _O, _G, _T, _N, _M, _U
-
-	b = next(c)
-
-	while _O[b] >= 0:
-		b = next(_O[b])
-	
-	if _O[b] != -1:
-		return
-	_O[c], _O[b] = b, c
-
-	a = previous(c)
-	_V[previous(a)] = _V[previous(b)]
-
-	while _O[a] >= 0 and b != a:
-		a = previous(_O[a])
-		_V[previous(a)] = _V[previous(b)]
-	
-	c = previous(c)
-
-	while _O[c] >= 0 and c != b:
-		c = previous(_O[c])
-	
-	if _O[c] == -2:
-		zip(c)
 
 
 def decompressVertices(c):
