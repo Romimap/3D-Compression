@@ -6,6 +6,7 @@ https://www.cs.cmu.edu/~alla/edgebreaker_simple.pdf
 '''
 
 import cProfile
+import math
 import numpy
 import open3d
 import sys
@@ -270,6 +271,30 @@ def zip(c):
 			return
 
 
+def calculateMeshNormals(mesh):
+	triangles = mesh.triangles
+	triangleNormals = numpy.empty((len(triangles), 3))
+
+	i = 0
+	for t in triangles:
+		n1 = _normals[t[0]]
+		n2 = _normals[t[1]]
+		n3 = _normals[t[2]]
+		triangleNormal = [n1[0] + n2[0] + n3[0], n1[1] + n2[1] + n3[1], n1[2] + n2[2] + n3[2]]
+		length = math.sqrt(math.pow(triangleNormal[0], 2) + math.pow(triangleNormal[1], 2) + math.pow(triangleNormal[1], 2))
+		triangleNormal[0] /= length
+		triangleNormal[1] /= length
+		triangleNormal[2] /= length
+
+		triangleNormals[i] = triangleNormal
+		i += 1
+
+	mesh.vertex_normals = open3d.utility.Vector3dVector(_normals)
+	mesh.triangle_normals = open3d.utility.Vector3dVector(triangleNormals)
+
+	return mesh
+
+
 def recreateMesh():
 	triangles = []
 	triangle = []
@@ -287,8 +312,7 @@ def recreateMesh():
 	triangles = open3d.utility.Vector3iVector(triangles)
 
 	mesh = open3d.geometry.TriangleMesh(vertices, triangles)
-	mesh.compute_vertex_normals()
-	mesh.compute_triangle_normals()
+	mesh = calculateMeshNormals(mesh)
 
 	return mesh
 

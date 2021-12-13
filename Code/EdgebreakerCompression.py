@@ -48,6 +48,7 @@ _triangles = None
 
 ## EDGEBREAKER RELATED
 
+_mesh = None				# The original mesh
 _heMesh = None 				# The mesh containing half-edges data
 
 _clers = ""					# String storing the CLERS steps of the EdgeBreaker algorithm's path
@@ -72,7 +73,7 @@ def initVars():
 	global _debugTriangleColor, _debugColorOffset, _debugRGBIndex, _debugRGBIncrease
 	global _visualizer, _lastUpdateTime
 	global _halfEdges, _vertices, _normals, _triangles
-	global _heMesh, _clers, _deltas, _outputNormals, _marked, _flagged
+	global _mesh, _heMesh, _clers, _deltas, _outputNormals, _marked, _flagged
 	global _startingHalfEdge, _previousHeId
 
 	## DEBUG AND VISUALIZATION
@@ -95,6 +96,7 @@ def initVars():
 
 	## EDGEBREAKER RELATED
 
+	_mesh = None				# The original mesh
 	_heMesh = None 				# The mesh containing half-edges data
 
 	_clers = ""					# String storing the CLERS steps of the EdgeBreaker algorithm's path
@@ -123,10 +125,6 @@ def getVertexId(halfEdgeId):
 
 
 ## HALF-EDGES
-
-def getHalfEdge(halfEdgeId):
-	return _halfEdges[halfEdgeId]
-
 
 def getNextHeId(halfEdgeId):
 	if halfEdgeId == -1:
@@ -172,6 +170,16 @@ def getVertexPosFromVertexId(vertexId):
 
 def getVertexPosFromHeId(halfEdgeId):
 	return _vertices[getVertexId(halfEdgeId)]
+
+
+## VERTEX NORMAL
+
+def getVertexNormalFromVertexId(vertexId):
+	return _normals[vertexId]
+
+
+def getVertexNormalFromHeId(halfEdgeId):
+	return _normals[getVertexId(halfEdgeId)]
 
 
 ## TRIANGLES
@@ -253,19 +261,27 @@ def addVectors3D(v1, v2):
 def addPosToDeltas(halfEdgeId):
 	global _deltas, _outputNormals
 
-	pos = getVertexPosFromHeId(halfEdgeId)
-	_deltas.append(pos)
+	vertexId = getVertexId(halfEdgeId)
+	_deltas.append(getVertexPosFromVertexId(vertexId))
+
+	# Save vertex normal if there is
+	if _mesh.has_vertex_normals():
+		_outputNormals.append(getVertexNormalFromVertexId(vertexId))
 
 
 def addDifferenceVectorToDeltas(previousHalfEdgeId, halfEdgeId):
-	global _deltas
+	global _deltas, _outputNormals
 
 	vector = getDistanceVectorFromHeId(previousHalfEdgeId, halfEdgeId)
 	_deltas.append(vector)
 
+	# Save vertex normal if there is
+	if _mesh.has_vertex_normals():
+		_outputNormals.append(getVertexNormalFromHeId(halfEdgeId))
+
 
 def addCorrectionVectorToDeltas(halfEdgeId):
-	global _deltas
+	global _deltas, _outputNormals
 
 	hePos = getVertexPosFromHeId(halfEdgeId)
 	previousHePos = getVertexPosFromHeId(getPreviousHeId(halfEdgeId))
@@ -275,6 +291,10 @@ def addCorrectionVectorToDeltas(halfEdgeId):
 	correctionVector = addVectors3D(addVectors3D(addVectors3D(hePos, oppositeVector(previousHePos)), oppositeVector(nextHePos)), oppositeHePos)
 
 	_deltas.append(correctionVector)
+
+	# Save vertex normal if there is
+	if _mesh.has_vertex_normals():
+		_outputNormals.append(getVertexNormalFromHeId(halfEdgeId))
 
 
 # ------------------------------------------------------------
@@ -506,7 +526,7 @@ def compressRecursive(halfEdgeId):
 # ------------------------------------------------------------
 
 def compress(mesh, debug = False):
-	global _heMesh, _debugPrint
+	global _mesh, _heMesh, _debugPrint
 
 	_debugPrint = debug
 
@@ -514,7 +534,8 @@ def compress(mesh, debug = False):
 
 	initVars()
 
-	_heMesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(mesh)
+	_mesh = mesh
+	_heMesh = open3d.geometry.HalfEdgeTriangleMesh.create_from_triangle_mesh(_mesh)
 	
 	debugInit()
 
