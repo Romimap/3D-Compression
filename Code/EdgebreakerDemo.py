@@ -3,7 +3,7 @@ import open3d
 import sys
 
 from EdgebreakerCompression import compress
-from EdgebreakerDecompression import decompress
+from EdgebreakerDecompression import decompress, calculateMeshNormals
 
 
 def showMesh(mesh):
@@ -45,7 +45,7 @@ def main():
 
 	doCompress = True
 	doPreProcess = True
-	model = "XYZ Dragon.obj"
+	model = "Sphere.obj"
 
 	# Read original mesh and print stats
 	originalMesh = open3d.io.read_triangle_mesh(f'Models/{model}')
@@ -60,19 +60,22 @@ def main():
 		mesh = preProcess(model, originalMesh)
 
 	if not doCompress:		# Show original or pre-processed mesh
-		mesh.compute_vertex_normals()
-		mesh.compute_triangle_normals()
+		if mesh.has_vertex_normals():
+			mesh = calculateMeshNormals(mesh)
+		else:
+			mesh.compute_vertex_normals()
+			mesh.compute_triangle_normals()
 		showMesh(mesh)
 	else:					# Compress original or pre-processed mesh, decompress compressed mesh, and show decompressed mesh
 		try:
 			# Compress the mesh
 			clers, deltas, normals = compress(mesh, False)
-
-			# Decompress and show the mesh
-			decompressedMesh = decompress(clers, deltas, normals, False)
-			showMesh(decompressedMesh)
 		except:
 			print(f'{model} is not suitable to Edgebreaker. Use a simple compression.')
+
+		# Decompress and show the mesh
+		decompressedMesh = decompress(clers, deltas, normals, False)
+		showMesh(decompressedMesh)
 
 	return 0
 
