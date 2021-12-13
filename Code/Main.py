@@ -1,4 +1,13 @@
+from os import stat
 import tkinter as tk
+
+from tkinter.ttk import Progressbar
+from tkinter import ttk
+from tkinter import filedialog
+from tkinter import scrolledtext
+
+
+
 
 import open3d
 import sys
@@ -8,6 +17,7 @@ from EdgebreakerDecompression import decompress
 from Quantization import printBitString, quantizeVertices, quantizedPositionsToBitstring, normalsToBitstring, clersToBitstring, readVerticesBits
 from Encryption import scramble, unscramble, xorifyNormals
 from ImportExport import objImporter, objExporter, writeFile, readFile
+from tkinter import *
 
 
 def preProcess(model, mesh):
@@ -38,76 +48,167 @@ def preProcess(model, mesh):
 
 	return mesh
 
-def cryptoCompress (password, model, filename):
-	k = 10
-	#Load, Quantize and Process our mesh
-	originalMesh = objImporter(f'Models/{model}')
-	quantizeVertices(originalMesh, k)
-	mesh = preProcess(model, originalMesh)
-	bitstring = quantizeVertices(originalMesh, k) #a bit ugly but we need to call this on the preprocessed mesh to get a valid header for the bitstring
+def cryptoCompress (password, model, filename, outputWidget, outputBar):
+    outputWidget.insert(INSERT,'Starting Crypto Compression for\n')
+    outputWidget.insert(INSERT,model + '\n')
+    outputBar['value'] = 0
+    
+    k = 10
+    outputBar['value'] = 20
+    #Load, Quantize and Process our mesh
+    outputWidget.insert(INSERT,'Importing...\n')
+    originalMesh = objImporter(model)
+    outputWidget.insert(INSERT,'Quantizing & Processing...\n')
+    quantizeVertices(originalMesh, k)
+    mesh = preProcess(model, originalMesh)
+    bitstring = quantizeVertices(originalMesh, k) #a bit ugly but we need to call this on the preprocessed mesh to get a valid header for the bitstring
 
-	#Run EdgeBreaker
-	clers, deltas, normals = compress(mesh, debug=False)
+    outputWidget.insert(INSERT,'Running EdgeBreaker...\n')
+    outputBar['value'] = 40
+    #Run EdgeBreaker
+    clers, deltas, normals = compress(mesh, debug=False)
 
-	#Add our deltas, normals and clers to our bitsting
-	verticesBitstring = quantizedPositionsToBitstring(deltas, k)
-	verticesBitstring = verticesBitstring.replace('-', '1') #NOTE: negative numbers can now occur, decompression should take this into account
-	normals = mesh.vertex_normals #NOTE: Placeholder normal array
-	normalsBitstring = normalsToBitstring(normals, k)
-	clersBitstring = clersToBitstring(clers)
+    outputWidget.insert(INSERT,'Writing bitstring...\n')
+    outputBar['value'] = 60
+    #Add our deltas, normals and clers to our bitsting
+    verticesBitstring = quantizedPositionsToBitstring(deltas, k)
+    verticesBitstring = verticesBitstring.replace('-', '1') #NOTE: negative numbers can now occur, decompression should take this into account
+    normals = mesh.vertex_normals #NOTE: Placeholder normal array
+    normalsBitstring = normalsToBitstring(normals, k)
+    clersBitstring = clersToBitstring(clers)
 
-	bitstring += verticesBitstring
-	bitstring += normalsBitstring
-	bitstring += clersBitstring
+    bitstring += verticesBitstring
+    bitstring += normalsBitstring
+    bitstring += clersBitstring
 
-	#From our bitstring, scramble positions and normals
-	bitstring = scramble(bitstring, 10, password)
-	bitstring = xorifyNormals(bitstring, 10, password)
+    outputWidget.insert(INSERT,'Encrypting...\n')
+    outputBar['value'] = 80
+    #From our bitstring, scramble positions and normals
+    bitstring = scramble(bitstring, 10, password)
+    bitstring = xorifyNormals(bitstring, 10, password)
 
-	printBitString(bitstring)
+    printBitString(bitstring)
 
-	print(str(len(deltas)) + " " + str(len(normals)) + " " + str(len(clers)))
-	writeFile(bitstring, filename)
-	#open3d.visualization.draw_geometries([mesh])
+    print(str(len(deltas)) + " " + str(len(normals)) + " " + str(len(clers)))
+    writeFile(bitstring, filename)
+    #open3d.visualization.draw_geometries([mesh])
+    outputWidget.insert(INSERT,'Done !\n')
+    outputWidget.insert(INSERT,'Saved file :\n')
+    outputWidget.insert(INSERT,filename + '\n')
+    outputBar['value'] = 100
 
-def cryptoExtract (password, filename):
-	bitstring = readFile(filename)
-	printBitString(bitstring)
+def cryptoExtract (password, filename, modelFilename, outputWidget, outputBar):
+    outputWidget.insert(INSERT,'Starting Exctraction for\n')
+    outputWidget.insert(INSERT,filename + '\n')
 
-	#Decrypt our bitstring
-	bitstring = xorifyNormals(bitstring, 10, password)
-	bitstring = unscramble(bitstring, 10, password)
+    outputBar['value'] = 0
 
-	#Read the bitsting and extract data
-	deltas, normals, clers = readVerticesBits(bitstring)
+    bitstring = readFile(filename)
 
-	print(str(len(deltas)) + " " + str(len(normals)) + " " + str(len(clers)))
+    outputWidget.insert(INSERT,'Decrypting...\n')
+    outputBar['value'] = 20
+    #Decrypt our bitstring
+    bitstring = xorifyNormals(bitstring, 10, password)
+    bitstring = unscramble(bitstring, 10, password)
 
-	#Run the Edgebreaker decryption
-	decompressedMesh = decompress(clers, deltas, normals, False)
 
-	open3d.visualization.draw_geometries([decompressedMesh])
+    outputWidget.insert(INSERT,'Reading Data...\n')
+    outputBar['value'] = 40
+    #Read the bitsting and extract data
+    deltas, normals, clers = readVerticesBits(bitstring)
 
-	return decompressedMesh
+    print(str(len(deltas)) + " " + str(len(normals)) + " " + str(len(clers)))
 
+    outputWidget.insert(INSERT,'Extracting...\n')
+    outputBar['value'] = 60
+    #Run the Edgebreaker decryption
+    decompressedMesh = decompress(clers, deltas, normals, False)
+
+    outputWidget.insert(INSERT,'Writing file...\n')
+    outputBar['value'] = 80
+    objExporter(modelFilename, decompressedMesh)
+
+    outputWidget.insert(INSERT,'Done !\n')
+    outputWidget.insert(INSERT,'Saved file :\n')
+    outputWidget.insert(INSERT,modelFilename + '\n')
+    outputBar['value'] = 100
+
+    return decompressedMesh
 
 
 def main():
+    file = ""
 
-	print(f'\n\n\n\n\nRunning MAIN from EdgeBreakerDemo.py')
+    window = tk.Tk()
+    window.title("RFCP Crypto Compressor")
 
-	doCompress = True
-	doPreProcess = True
-	model = "Sphere.obj"
-	filename = "Sphere.rfcp"
+    bar = Progressbar(window, length=220)#, style='black.Horizontal.TProgressbar')
+    bar['value'] = 0
+    bar.grid(column=1, row=15, padx=10, pady=10)
 
-	#Crypto Compress our mesh
-	cryptoCompress("passwd", model, filename)
+    logBox = scrolledtext.ScrolledText(window)
+    logBox.grid(column=1, row=20, pady=15)
 
-	#Crypto Extract our mesh
-	cryptoExtract("passwd", filename)
+    fileLabel = Label(window, text="File")
+    fileLabel.grid(column=0, row=10, padx=10, pady=5)
 
-	exit()
+    fileText = Entry(window, width=30)
+    fileText.grid(column=1, row=10, padx=10, pady=5)
+
+    def fileBtnClicked ():
+        filetypes = (("Compressed RFCP Files","*.rfcp"),("Wavefront .obj file","*.obj"))
+        files = filedialog.askopenfilenames(filetypes=filetypes)
+        filestr = files[0]
+        filestr.replace("{", "")
+        filestr.replace("}", "")
+        fileText.delete(0, tk.END)
+        fileText.insert(0, filestr)
+    fileBtn = Button(window, text="Search", command=fileBtnClicked)
+    fileBtn.grid(column=2, row=10, padx=10, pady=5)
+
+    passwordLabel = Label(window, text="Password")
+    passwordLabel.grid(column=0, row=13, padx=10, pady=5)
+
+    passwordText = Entry(window,width=30, show="•")
+    passwordText.grid(column=1, row=13, padx=10, pady=5)
+
+    padding = Label(window, text="")
+    padding.grid(column=0, row=14)
+
+    def startBtnClicked ():
+        filename = fileText.get()
+        password = passwordText.get()
+        try:
+            if filename.endswith(".rfcp"):
+                compressedFilename = filename
+                modelFilename = filename[:-5] + ".obj"
+                cryptoExtract(password, compressedFilename, modelFilename, logBox, bar)
+            elif filename.endswith(".obj"):
+                modelFilename = filename
+                compressedFilename = filename[:-4] + ".rfcp"
+                cryptoCompress(password, modelFilename, compressedFilename, logBox, bar)
+        except:
+            logBox.insert(INSERT,'\nFatal Error, Aborting\n\n')
+            bar['value'] = 0
+
+    startBtn = Button(window, text="Start", command=startBtnClicked)
+    startBtn.grid(column=0, row=15, padx=10, pady=10)
+
+   
+
+    window.mainloop()
+
+    exit()
+
+    doCompress = True
+    doPreProcess = True
+    model = "XYZ Dragon.obj"
+    filename = "XYZ Dragon.rfcp"    
+    #Crypto Compress our mesh
+    cryptoCompress("passwd", model, filename)   
+    #Crypto Extract our mesh
+    cryptoExtract("passwd", filename)   
+    exit()
 
 
 if __name__ == '__main__':

@@ -342,9 +342,10 @@ def readVerticesBits(bitstring):
         if z >= 512: z = (z - 512) * -1
 
         vertex = numpy.array([
-            remap(x, 0, kpow, min[0], max[0]),
-            remap(y, 0, kpow, min[1], max[1]),
-            remap(z, 0, kpow, min[2], max[2])
+            #remap(x, 0, kpow, min[0], max[0]),
+            #remap(y, 0, kpow, min[1], max[1]),
+            #remap(z, 0, kpow, min[2], max[2])
+            x, y, z
         ])
         vertices[i] = vertex
 
