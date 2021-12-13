@@ -1,14 +1,41 @@
 
+import math
+import numpy
 import open3d
 import sys
 
 from EdgebreakerCompression import compress
-from EdgebreakerDecompression import decompress, calculateMeshNormals
+from EdgebreakerDecompression import decompress
 
 
 def showMesh(mesh):
 	mesh.paint_uniform_color([0.6, 0.6, 0.6])
 	open3d.visualization.draw_geometries([mesh])
+
+
+def calculateTriangleNormals(mesh):
+	triangles = mesh.triangles
+	vertexNormals = mesh.vertex_normals
+	triangleNormals = numpy.empty((len(triangles), 3))
+
+	i = 0
+	for t in triangles:
+		n1 = vertexNormals[t[0]]
+		n2 = vertexNormals[t[1]]
+		n3 = vertexNormals[t[2]]
+		triangleNormal = [n1[0] + n2[0] + n3[0], n1[1] + n2[1] + n3[1], n1[2] + n2[2] + n3[2]]
+		length = math.sqrt(math.pow(triangleNormal[0], 2) + math.pow(triangleNormal[1], 2) + math.pow(triangleNormal[1], 2))
+		triangleNormal[0] /= length
+		triangleNormal[1] /= length
+		triangleNormal[2] /= length
+
+		triangleNormals[i] = triangleNormal
+		i += 1
+
+	mesh.vertex_normals = open3d.utility.Vector3dVector(vertexNormals)
+	mesh.triangle_normals = open3d.utility.Vector3dVector(triangleNormals)
+
+	return mesh
 
 
 def preProcess(model, mesh):
@@ -43,7 +70,7 @@ def preProcess(model, mesh):
 def main():
 	print(f'\n\n\n\n\nRunning MAIN from EdgeBreakerDemo.py')
 
-	doCompress = True
+	doCompress = False
 	doPreProcess = True
 	model = "Sphere.obj"
 
@@ -61,7 +88,7 @@ def main():
 
 	if not doCompress:		# Show original or pre-processed mesh
 		if mesh.has_vertex_normals():
-			mesh = calculateMeshNormals(mesh)
+			mesh = calculateTriangleNormals(mesh)
 		else:
 			mesh.compute_vertex_normals()
 			mesh.compute_triangle_normals()
