@@ -29,40 +29,66 @@ _debugPrint = False					# True if you want to enable debug prints
 _debugDelayPerFrame = 0.01			# Delay between draw calls
 
 _visualizer = None					# The visualizer (the window)
-_lastUpdateTime = -1				# Last visual update time in seconds
-
-
-## DATA STORAGE
-
-# Store frequently accessed data in numpy arrays to accelerate access time
-_halfEdges = None
-_vertices = None
-_triangles = None
+_lastUpdateTime = None				# Last visual update time in seconds
 
 
 ## EDGEBREAKER RELATED
 
-_heMesh = None 				# The mesh containing half-edges data
+_heMesh = None 		# The mesh containing half-edges data
 
-_clers = ""					# String storing the CLERS steps of the EdgeBreaker algorithm's path
-_deltas = []				# List of 3D points/vectors storing the first points and the correction vectors
-_normals = []				# TODO
+_clers = None		# String storing the CLERS steps of the EdgeBreaker algorithm's path
+_deltas = None		# List of 3D points/vectors storing the first points and the correction vectors
+_normals = None		# TODO
 
-_M = []						# List of bool indicating whether a vertex has already been visited
-_U = []						# List of bool indicating whether a triangle has already been visited
+_M = None			# List of bool indicating whether a vertex has already been visited
+_U = None			# List of bool indicating whether a triangle has already been visited
 
 
 ## EDGEBREAKER DECOMPRESSION SPECIFIC
 
-_V = []						# Vertices id of each corner
-_O = []						# Opposite corner id of each corner
-_G = []						# Geometry (position) of each vertex
+_V = None			# Vertices id of each corner
+_O = None			# Opposite corner id of each corner
+_G = None			# Geometry (position) of each vertex
 
-_T = 0						# Current triangle id
-_N = 2						# Current vertex id
+_T = None			# Current triangle id
+_N = None			# Current vertex id
 
-_deltasIndex = 0
-_clersIndex = 0
+_deltasIndex = None
+_clersIndex = None
+
+
+def initVars():
+	global _visualizer, _lastUpdateTime
+	global _heMesh, _clers, _deltas, _normals, _M, _U
+	global _V, _O, _G, _T, _N, _deltasIndex, _clersIndex
+	
+	## DEBUG AND VISUALIZATION
+
+	_visualizer = None		# The visualizer (the window)
+	_lastUpdateTime = -1	# Last visual update time in seconds
+
+	## EDGEBREAKER RELATED
+
+	_heMesh = None 			# The mesh containing half-edges data
+
+	_clers = ""				# String storing the CLERS steps of the EdgeBreaker algorithm's path
+	_deltas = []			# List of 3D points/vectors storing the first points and the correction vectors
+	_normals = []			# TODO
+
+	_M = []					# List of bool indicating whether a vertex has already been visited
+	_U = []					# List of bool indicating whether a triangle has already been visited
+
+	## EDGEBREAKER DECOMPRESSION SPECIFIC
+
+	_V = []					# Vertices id of each corner
+	_O = []					# Opposite corner id of each corner
+	_G = []					# Geometry (position) of each vertex
+
+	_T = 0					# Current triangle id
+	_N = 2					# Current vertex id
+
+	_deltasIndex = 0
+	_clersIndex = 0
 
 
 # ------------------------------------------------------------
@@ -374,6 +400,8 @@ def decompress(clers, deltas, normals, debug = False):
 	_debugPrint = debug
 
 	print(f'Edgebreaker decompression starting at: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
+
+	initVars()
 	
 	debugInit()
 
