@@ -1,5 +1,5 @@
 from numpy.lib.function_base import average
-import Code.bcolors
+import bcolors
 import sys
 import os
 from numpy.core.numeric import indices
@@ -216,6 +216,8 @@ def quantizedPositionsToBitstring(vertices, k):
 
 #Returns the bitstring representing the normals of our mesh
 def normalsToBitstring(normals, k):
+    print(normals)
+
     bitstring = ''
     # * * * * * * * * * *
     # * * * NORMALS * * *
@@ -230,6 +232,17 @@ def normalsToBitstring(normals, k):
         bitstring += '{0:017b}'.format(int(id))
     return bitstring
 
+def clersToBitstring(clers):
+    bitstring = ""
+    clersList = list(clers)
+    for c in clersList:
+        if c == "C": bitstring += "0"
+        if c == "L": bitstring += "100"
+        if c == "E": bitstring += "101"
+        if c == "R": bitstring += "110"
+        if c == "S": bitstring += "111"
+    return bitstring
+
 
 def printbin(bitstring, start, end, colorstart = 0, colorend = 0, rangevalue = 8):
     r = 0
@@ -239,15 +252,15 @@ def printbin(bitstring, start, end, colorstart = 0, colorend = 0, rangevalue = 8
             for k in range(0, 8):
                 if (i+j+k >= start and i+j+k < end):
                     if (i+j+k >= colorstart and i+j+k < colorend):
-                        print(f"{Code.bcolors.bcolors.OKGREEN}" + bitstring[i+j+k], end='')
+                        print(f"{bcolors.bcolors.OKGREEN}" + bitstring[i+j+k], end='')
                     else:
                         if (int(r / rangevalue) % 2 == 0):
-                            print(f"{Code.bcolors.bcolors.OKCYAN}" + bitstring[i+j+k], end='')
+                            print(f"{bcolors.bcolors.OKCYAN}" + bitstring[i+j+k], end='')
                         else:
-                            print(f"{Code.bcolors.bcolors.OKBLUE}" + bitstring[i+j+k], end='')
+                            print(f"{bcolors.bcolors.OKBLUE}" + bitstring[i+j+k], end='')
                     r += 1
             print(' ', end='')
-        print(f"{Code.bcolors.bcolors.ENDC}")
+        print(f"{bcolors.bcolors.ENDC}")
     print(str(end - 1).ljust(8) + ": END")
 
 def printBitString(bitstring):
@@ -271,8 +284,14 @@ def printBitString(bitstring):
     kn = 17
     printbin(bitstring, n, n + (kn * 10), n, n + kn, 17)
     print ('...')
-    n += 17 * vertexCount
+    n += kn * vertexCount
     printbin(bitstring, n - (kn * 10), n, n - kn, n, 17)
+
+    printbin(bitstring, n, n + 100, n, n + 1, 1)
+    print ('...')
+    n = len(bitstring)
+    printbin(bitstring, n - 100, n, n-1, n, 1)
+
 
 
 
@@ -316,6 +335,12 @@ def readVerticesBits(bitstring):
         n += k
         z = int(bitstring[n:n + k], 2)
         n += k
+
+        #if the MSB is 1, convert to negative
+        if x >= 512: x = (x - 512) * -1
+        if y >= 512: y = (y - 512) * -1
+        if z >= 512: z = (z - 512) * -1
+
         vertex = numpy.array([
             remap(x, 0, kpow, min[0], max[0]),
             remap(y, 0, kpow, min[1], max[1]),
@@ -332,7 +357,25 @@ def readVerticesBits(bitstring):
         n += kn
         normals[i] = fibSphere[x]
 
+    # CLERS
+    clers = ""
+    i = n
+    while i in range(n, len(bitstring)):
+        if bitstring[i] == "0":
+            clers += "C"
+            i += 1
+        elif bitstring[i:i+3] == "100": 
+            clers += "L"
+            i += 3
+        elif bitstring[i:i+3] == "101": 
+            clers += "E"
+            i += 3
+        elif bitstring[i:i+3] == "110": 
+            clers += "R"
+            i += 3
+        elif bitstring[i:i+3] == "111": 
+            clers += "S"
+            i += 3
 
-    
-    return vertices, normals
+    return vertices, normals, clers
 

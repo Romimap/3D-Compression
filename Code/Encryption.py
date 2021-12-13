@@ -1,9 +1,9 @@
 import random
 
-from Code.Quantization import headerSize
+from Quantization import headerSize
 
-SALTPOS = "salty"
-SALTNRM = "salty"
+SALTPOS = "salty_positions"
+SALTNRM = "salty_normals"
 
 
 def xorifyNormals (bitstring, k, key):
@@ -11,7 +11,8 @@ def xorifyNormals (bitstring, k, key):
     vertexNb = int(bitstring[4:36], 2)
     bitstring = list(bitstring)
     startindex = headerSize + (3 * k * vertexNb)
-    for k in range(startindex, len(bitstring)):
+    endindex = startindex + vertexNb * 17
+    for k in range(startindex, endindex):
         if int(bitstring[k]) == random.randint(0, 1):
             bitstring[k] = '0'
         else:
