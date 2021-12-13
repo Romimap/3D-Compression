@@ -28,13 +28,13 @@ _debugPrint = False					# True if you want to enable debug prints
 
 _debugDelayPerFrame = 0.01			# Delay between draw calls
 
-_debugTriangleColor = None			# The current triangle color for debug-drawing triangles (to use, divide by 255)
-_debugColorOffset = None			# For each triangle, 24 will be added or removed from one of the RGB component
-_debugRGBIndex = None				# RGB index, 0 = R, 1 = G, 2 = B
-_debugRGBIncrease = None			# When true, we add _debugColorOffset for each triangle, else we subtract _debugColorOffset
+_debugTriangleColor = []			# The current triangle color for debug-drawing triangles (to use, divide by 255)
+_debugColorOffset = 0				# For each triangle, 24 will be added or removed from one of the RGB component
+_debugRGBIndex = 0					# RGB index, 0 = R, 1 = G, 2 = B
+_debugRGBIncrease = True			# When true, we add _debugColorOffset for each triangle, else we subtract _debugColorOffset
 
 _visualizer = None					# The visualizer (the window)
-_lastUpdateTime = None				# Last visual update time in seconds
+_lastUpdateTime = 0					# Last visual update time in seconds
 
 
 ## DATA STORAGE
@@ -42,6 +42,7 @@ _lastUpdateTime = None				# Last visual update time in seconds
 # Store frequently accessed data in numpy arrays to accelerate access time
 _halfEdges = None
 _vertices = None
+_normals = None
 _triangles = None
 
 
@@ -49,18 +50,18 @@ _triangles = None
 
 _heMesh = None 				# The mesh containing half-edges data
 
-_clers = None				# String storing the CLERS steps of the EdgeBreaker algorithm's path
-_deltas = None				# List of 3D points/vectors storing the first points and the correction vectors
-_normals = None				# TODO
+_clers = ""					# String storing the CLERS steps of the EdgeBreaker algorithm's path
+_deltas = []				# List of 3D points/vectors storing the first points and the correction vectors
+_outputNormals = []			# TODO
 
-_marked = None				# List of bool indicating whether a vertex has already been visited: M in the paper
-_flagged = None				# List of bool indicating whether a triangle has already been visited: U in the paper
+_marked = []				# List of bool indicating whether a vertex has already been visited: M in the paper
+_flagged = []				# List of bool indicating whether a triangle has already been visited: U in the paper
 
 
 ## EDGEBREAKER COMPRESSION SPECIFIC
 
-_startingHalfEdge = None	# Select first half-edge to begin the EdgeBreaker algorithm
-_previousHeId = None		# Id of the previously visited half-edge, used to calculate delta vector(_previousHeId → halfEdgeId)
+_startingHalfEdge = 0		# Select first half-edge to begin the EdgeBreaker algorithm
+_previousHeId = 0			# Id of the previously visited half-edge, used to calculate delta vector(_previousHeId → halfEdgeId)
 
 
 # ------------------------------------------------------------
@@ -70,8 +71,9 @@ _previousHeId = None		# Id of the previously visited half-edge, used to calculat
 def initVars():
 	global _debugTriangleColor, _debugColorOffset, _debugRGBIndex, _debugRGBIncrease
 	global _visualizer, _lastUpdateTime
-	global _halfEdges, _vertices, _triangles
-	global _heMesh, _clers, _deltas, _normals, _marked, _flagged
+	global _halfEdges, _vertices, _normals, _triangles
+	global _heMesh, _clers, _deltas, _outputNormals, _marked, _flagged
+	global _startingHalfEdge, _previousHeId
 
 	## DEBUG AND VISUALIZATION
 
@@ -88,6 +90,7 @@ def initVars():
 	# Store frequently accessed data in numpy arrays to accelerate access time
 	_halfEdges = None
 	_vertices = None
+	_normals = None
 	_triangles = None
 
 	## EDGEBREAKER RELATED
@@ -96,10 +99,15 @@ def initVars():
 
 	_clers = ""					# String storing the CLERS steps of the EdgeBreaker algorithm's path
 	_deltas = []				# List of 3D points/vectors storing the first points and the correction vectors
-	_normals = []				# TODO
+	_outputNormals = []			# TODO
 
 	_marked = []				# List of bool indicating whether a vertex has already been visited: M in the paper
 	_flagged = []				# List of bool indicating whether a triangle has already been visited: U in the paper
+	
+	## EDGEBREAKER COMPRESSION SPECIFIC
+
+	_startingHalfEdge = 0		# Select first half-edge to begin the EdgeBreaker algorithm
+	_previousHeId = -1			# Id of the previously visited half-edge, used to calculate delta vector(_previousHeId → halfEdgeId)
 
 
 # ------------------------------------------------------------
@@ -243,7 +251,7 @@ def addVectors3D(v1, v2):
 # ------------------------------------------------------------
 
 def addPosToDeltas(halfEdgeId):
-	global _deltas
+	global _deltas, _outputNormals
 
 	pos = getVertexPosFromHeId(halfEdgeId)
 	_deltas.append(pos)
@@ -381,7 +389,7 @@ def debugPrintInfos():
 
 # Initialize the data used by EdgeBreaker
 def initData():
-	global _marked, _flagged, _halfEdges, _vertices, _triangles
+	global _marked, _flagged, _halfEdges, _vertices, _normals, _triangles
 
 	# Marks and flags
 	_marked = [False] * len(_heMesh.vertices) 		# Marks: if a vertex has been visited or not
@@ -390,6 +398,7 @@ def initData():
 	# Numpy arrays for acceleration
 	_halfEdges = numpy.array(_heMesh.half_edges)
 	_vertices = numpy.array(_heMesh.vertices)
+	_normals = numpy.array(_heMesh.vertex_normals)
 	_triangles = numpy.array(_heMesh.triangles)
 
 	# Mark boundary vertices as "seen"
@@ -518,7 +527,7 @@ def compress(mesh, debug = False):
 
 	print(f'Edgebreaker compression ending at: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
 
-	return _clers, _deltas, _normals
+	return _clers, _deltas, _outputNormals
 
 
 # ------------------------------------------------------------
