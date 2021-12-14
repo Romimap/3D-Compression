@@ -8,6 +8,8 @@ from EdgebreakerCompression import compress
 from EdgebreakerDecompression import decompress
 from MeshQualityEvaluation import evaluateWithHausdorff
 
+from Quantization import quantizeVertices, quantizeVerticesRescale
+
 
 def showMesh(mesh):
 	mesh.paint_uniform_color([0.6, 0.6, 0.6])
@@ -39,31 +41,17 @@ def calculateTriangleNormals(mesh):
 	return mesh
 
 
-def preProcess(model, mesh):
+def preProcess(mesh, doPrint = False):
 	mesh = mesh.remove_degenerate_triangles()
-	print(f'After remove_degenerate_triangles()... {model} model stats:')
-	print(f'Vertices: {len(mesh.vertices)}')
-	print(f'Triangles: {len(mesh.triangles)}')
-
 	mesh = mesh.remove_duplicated_triangles()
-	print(f'After remove_duplicated_triangles()... {model} model stats:')
-	print(f'Vertices: {len(mesh.vertices)}')
-	print(f'Triangles: {len(mesh.triangles)}')
-
 	mesh = mesh.remove_duplicated_vertices()
-	print(f'After remove_duplicated_vertices()... {model} model stats:')
-	print(f'Vertices: {len(mesh.vertices)}')
-	print(f'Triangles: {len(mesh.triangles)}')
-
 	mesh = mesh.remove_non_manifold_edges()
-	print(f'After remove_non_manifold_edges()... {model} model stats:')
-	print(f'Vertices: {len(mesh.vertices)}')
-	print(f'Triangles: {len(mesh.triangles)}')
-
 	mesh = mesh.remove_unreferenced_vertices()
-	print(f'After remove_unreferenced_vertices()... {model} model stats:')
-	print(f'Vertices: {len(mesh.vertices)}')
-	print(f'Triangles: {len(mesh.triangles)}')
+
+	if doPrint:
+		print(f'After preprocessing:')
+		print(f'Vertices: {len(mesh.vertices)}')
+		print(f'Triangles: {len(mesh.triangles)}')
 
 	return mesh
 
@@ -73,10 +61,14 @@ def main():
 
 	doCompress = True
 	doPreProcess = True
-	model = "Sphere.obj"
+	model = "Igea.obj"
 
 	# Read original mesh and print stats
+	originalMesh = open3d.io.read_triangle_mesh(f'Models/{model}')
 	mesh = open3d.io.read_triangle_mesh(f'Models/{model}')
+	
+	# quantizeVertices(mesh, 20)			# Use one...
+	quantizeVerticesRescale(mesh, 20)		# Or the other (depending on the bug you have :p)
 
 	print(f'{model} model stats:')
 	print(f'Vertices: {len(mesh.vertices)}')
@@ -84,14 +76,17 @@ def main():
 	
 	# Verify if normals are specified, if not, calculate them
 	if mesh.has_vertex_normals():
+		print(f'V - Mesh has vertex normals')
 		mesh = calculateTriangleNormals(mesh)
 	else:
+		print(f'X - Mesh doesn\'t have vertex normals')
 		mesh.compute_vertex_normals()
 		mesh.compute_triangle_normals()
 	
 	# Pre-process the mesh if specified
 	if doPreProcess:
-		mesh = preProcess(model, mesh)
+		originalMesh = preProcess(originalMesh)
+		mesh = preProcess(mesh, True)
 
 	if not doCompress:		# Show original or pre-processed mesh
 		showMesh(mesh)
@@ -106,8 +101,8 @@ def main():
 		decompressedMesh = decompress(clers, deltas, normals, False)
 
 		# Evaluate decompressed mesh quality
-		# originalMesh = open3d.io.read_triangle_mesh(f'Models/{model}')
-		# evaluateWithHausdorff(originalMesh, decompressedMesh)
+		distance = evaluateWithHausdorff(originalMesh, decompressedMesh)
+		print(f'Hausdorff distance = {distance}')
 
 		# Show the mesh
 		showMesh(decompressedMesh)
