@@ -82,7 +82,7 @@ def cryptoCompress (password, model, filename, outputWidget, outputBar):
     #Add our deltas, normals and clers to our bitsting
     verticesBitstring = quantizedPositionsToBitstring(deltas, k)
     verticesBitstring = verticesBitstring.replace('-', '1') #NOTE: negative numbers can now occur, decompression should take this into account
-    normals = originalMesh.vertex_normals #NOTE: Placeholder normal array
+    #normals = originalMesh.vertex_normals #NOTE: Placeholder normal array
     normalsBitstring = normalsToBitstring(normals, k)
     clersBitstring = clersToBitstring(clers)
 
