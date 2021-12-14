@@ -156,13 +156,6 @@ def simplify(mesh):
 def quantizeVertices(mesh, k):
     vertices = numpy.asarray(mesh.vertices)
 
-    print("vnb @ quantization: " + str(len(vertices)))
-
-    bitstring = ''
-    bitstring += '{0:04b}'.format(k)
-    bitstring += '{0:032b}'.format(len(vertices))
-    print("bin : " + bitstring[4:])
-
     # * * * * * * * * * *
     # * * POSITIONS * * *
     # * * * * * * * * * *
@@ -177,13 +170,6 @@ def quantizeVertices(mesh, k):
         if vertex[0] < min[0]: min[0] = vertex[0]
         if vertex[1] < min[1]: min[1] = vertex[1]
         if vertex[2] < min[2]: min[2] = vertex[2]
-
-    bitstring += float_to_bin(numpy.float32(min[0]))
-    bitstring += float_to_bin(numpy.float32(min[1]))
-    bitstring += float_to_bin(numpy.float32(min[2]))
-    bitstring += float_to_bin(numpy.float32(max[0]))
-    bitstring += float_to_bin(numpy.float32(max[1]))
-    bitstring += float_to_bin(numpy.float32(max[2]))
 
     #Normalize coordinates into a unit AABB
     for vertex in vertices:
@@ -200,42 +186,6 @@ def quantizeVertices(mesh, k):
         vertex[0] = x
         vertex[1] = y
         vertex[2] = z
-
-    
-
-    return bitstring
-
-def makeHeader(mesh, k, deltas):
-    vertices = numpy.asarray(mesh.vertices)
-
-    print("vnb @ quantization: " + str(len(vertices)))
-
-    bitstring = ''
-    bitstring += '{0:04b}'.format(k)
-    bitstring += '{0:032b}'.format(len(deltas))
-    print("bin : " + bitstring[4:])
-
-    # * * * * * * * * * *
-    # * * POSITIONS * * *
-    # * * * * * * * * * *
-    #Compute AABB
-    min = numpy.array([999999.9, 999999.9, 999999.9])
-    max = numpy.array([-999999.9, -999999.9, -999999.9])
-
-    for vertex in vertices:
-        if vertex[0] > max[0]: max[0] = vertex[0]
-        if vertex[1] > max[1]: max[1] = vertex[1]
-        if vertex[2] > max[2]: max[2] = vertex[2]
-        if vertex[0] < min[0]: min[0] = vertex[0]
-        if vertex[1] < min[1]: min[1] = vertex[1]
-        if vertex[2] < min[2]: min[2] = vertex[2]
-
-    bitstring += float_to_bin(numpy.float32(min[0]))
-    bitstring += float_to_bin(numpy.float32(min[1]))
-    bitstring += float_to_bin(numpy.float32(min[2]))
-    bitstring += float_to_bin(numpy.float32(max[0]))
-    bitstring += float_to_bin(numpy.float32(max[1]))
-    bitstring += float_to_bin(numpy.float32(max[2]))
 
 
 #Returns the bitstring representing the positions of our mesh
@@ -330,6 +280,39 @@ def printBitString(bitstring):
 
 
 
+def writeHeader (mesh, k, deltas):
+    vertices = numpy.asarray(mesh.vertices)
+
+    print("vnb @ quantization: " + str(len(vertices)))
+
+    bitstring = ''
+    bitstring += '{0:04b}'.format(k)
+    bitstring += '{0:032b}'.format(len(deltas))
+    print("bin : " + bitstring[4:])
+
+    # * * * * * * * * * *
+    # * * POSITIONS * * *
+    # * * * * * * * * * *
+    #Compute AABB
+    min = numpy.array([999999.9, 999999.9, 999999.9])
+    max = numpy.array([-999999.9, -999999.9, -999999.9])
+
+    for vertex in vertices:
+        if vertex[0] > max[0]: max[0] = vertex[0]
+        if vertex[1] > max[1]: max[1] = vertex[1]
+        if vertex[2] > max[2]: max[2] = vertex[2]
+        if vertex[0] < min[0]: min[0] = vertex[0]
+        if vertex[1] < min[1]: min[1] = vertex[1]
+        if vertex[2] < min[2]: min[2] = vertex[2]
+
+    bitstring += float_to_bin(numpy.float32(min[0]))
+    bitstring += float_to_bin(numpy.float32(min[1]))
+    bitstring += float_to_bin(numpy.float32(min[2]))
+    bitstring += float_to_bin(numpy.float32(max[0]))
+    bitstring += float_to_bin(numpy.float32(max[1]))
+    bitstring += float_to_bin(numpy.float32(max[2]))    
+
+    return bitstring
 
 
 
@@ -357,7 +340,7 @@ def readVerticesBits(bitstring):
     min = numpy.array([minx, miny, minz])
     max = numpy.array([maxx, maxy, maxz])
 
-   
+    print(f'AAAAAAAA {min} -> {max}')
 
     # Vertices
     n = headerSize

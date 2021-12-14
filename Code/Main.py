@@ -1,6 +1,7 @@
 from os import stat
 import tkinter as tk
 import traceback
+import copy
 
 from tkinter.ttk import Progressbar
 from tkinter import ttk
@@ -15,10 +16,15 @@ import sys
 
 from EdgebreakerCompression import compress
 from EdgebreakerDecompression import decompress
-from Quantization import printBitString, quantizeVertices, quantizedPositionsToBitstring, normalsToBitstring, clersToBitstring, readVerticesBits
+from Quantization import writeHeader, printBitString, quantizeVertices, quantizedPositionsToBitstring, normalsToBitstring, clersToBitstring, readVerticesBits
 from Encryption import scramble, unscramble, xorifyNormals
 from ImportExport import objImporter, objExporter, writeFile, readFile
 from tkinter import *
+
+
+def showMesh(mesh):
+	mesh.paint_uniform_color([0.6, 0.6, 0.6])
+	open3d.visualization.draw_geometries([mesh])
 
 
 def preProcess(model, mesh):
@@ -59,23 +65,24 @@ def cryptoCompress (password, model, filename, outputWidget, outputBar):
     #Load, Quantize and Process our mesh
     outputWidget.insert(INSERT,'Importing...\n')
     originalMesh = objImporter(model)
-    
+    bkpMesh = copy.deepcopy(originalMesh)
+
     outputWidget.insert(INSERT,'Quantizing & Processing...\n')
     quantizeVertices(originalMesh, k)
-    mesh = preProcess(model, originalMesh)
-    bitstring = quantizeVertices(originalMesh, k) #a bit ugly but we need to call this on the preprocessed mesh to get a valid header for the bitstring
+    preProcess(model, originalMesh)
 
     outputWidget.insert(INSERT,'Running EdgeBreaker...\n')
     outputBar['value'] = 40
     #Run EdgeBreaker
-    clers, deltas, normals = compress(mesh, debug=False)
+    clers, deltas, normals = compress(originalMesh, debug=False)
+    bitstring = writeHeader(bkpMesh, k, deltas)
 
     outputWidget.insert(INSERT,'Writing bitstring...\n')
     outputBar['value'] = 60
     #Add our deltas, normals and clers to our bitsting
     verticesBitstring = quantizedPositionsToBitstring(deltas, k)
     verticesBitstring = verticesBitstring.replace('-', '1') #NOTE: negative numbers can now occur, decompression should take this into account
-    normals = mesh.vertex_normals #NOTE: Placeholder normal array
+    normals = originalMesh.vertex_normals #NOTE: Placeholder normal array
     normalsBitstring = normalsToBitstring(normals, k)
     clersBitstring = clersToBitstring(clers)
 
@@ -137,6 +144,8 @@ def cryptoExtract (password, filename, modelFilename, outputWidget, outputBar):
     outputWidget.insert(INSERT,modelFilename + '\n')
     outputBar['value'] = 100
 
+    showMesh(decompressedMesh)
+
     return decompressedMesh
 
 
@@ -185,7 +194,7 @@ def main():
         try:
             if filename.endswith(".rfcp"):
                 compressedFilename = filename
-                modelFilename = filename[:-5] + ".obj"
+                modelFilename = filename[:-5] + "out.obj"
                 cryptoExtract(password, compressedFilename, modelFilename, logBox, bar)
             elif filename.endswith(".obj"):
                 modelFilename = filename
