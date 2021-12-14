@@ -322,6 +322,9 @@ def decompressConnectivity(c):
 
 	while True:
 		_T += 1
+		if _T >= len(_O) / 3:
+			return
+		
 		_O[c], _O[3 * _T] = 3 * _T, c
 		_V[3 * _T + 1], _V[3 * _T + 2] = _V[previous(c)], _V[next(c)]
 		c = next(_O[c])

@@ -222,6 +222,41 @@ def quantizeVerticesRescale(mesh, k):
         vertex[2] = remap(z, 0, kpow, min[2], max[2])
 
 
+def quantizeVerticesRescale(mesh, k):
+    vertices = numpy.asarray(mesh.vertices)
+
+    # * * * * * * * * * *
+    # * * POSITIONS * * *
+    # * * * * * * * * * *
+    #Compute AABB
+    min = numpy.array([999999.9, 999999.9, 999999.9])
+    max = numpy.array([-999999.9, -999999.9, -999999.9])
+
+    for vertex in vertices:
+        if vertex[0] > max[0]: max[0] = vertex[0]
+        if vertex[1] > max[1]: max[1] = vertex[1]
+        if vertex[2] > max[2]: max[2] = vertex[2]
+        if vertex[0] < min[0]: min[0] = vertex[0]
+        if vertex[1] < min[1]: min[1] = vertex[1]
+        if vertex[2] < min[2]: min[2] = vertex[2]
+
+    #Normalize coordinates into a unit AABB
+    for vertex in vertices:
+        vertex[0] = remap(vertex[0], min[0], max[0], 0, 1)
+        vertex[1] = remap(vertex[1], min[1], max[1], 0, 1)
+        vertex[2] = remap(vertex[2], min[2], max[2], 0, 1)
+
+    #Quantize
+    kpow = pow(2, k) - 1
+    for vertex in vertices:
+        x = int(round(kpow * vertex[0]))
+        y = int(round(kpow * vertex[1]))
+        z = int(round(kpow * vertex[2]))
+        vertex[0] = remap(x, 0, kpow, min[0], max[0])
+        vertex[1] = remap(y, 0, kpow, min[1], max[1])
+        vertex[2] = remap(z, 0, kpow, min[2], max[2])
+
+
 #Returns the bitstring representing the positions of our mesh
 def quantizedPositionsToBitstring(vertices, k):
     bitstring = ''
