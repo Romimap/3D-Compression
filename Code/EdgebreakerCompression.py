@@ -53,7 +53,7 @@ _heMesh = None 				# The mesh containing half-edges data
 
 _clers = ""					# String storing the CLERS steps of the EdgeBreaker algorithm's path
 _deltas = []				# List of 3D points/vectors storing the first points and the correction vectors
-_outputNormals = []			# TODO
+_outputNormals = []			# List of vertex normals
 
 _marked = []				# List of bool indicating whether a vertex has already been visited: M in the paper
 _flagged = []				# List of bool indicating whether a triangle has already been visited: U in the paper
@@ -101,7 +101,7 @@ def initVars():
 
 	_clers = ""					# String storing the CLERS steps of the EdgeBreaker algorithm's path
 	_deltas = []				# List of 3D points/vectors storing the first points and the correction vectors
-	_outputNormals = []			# TODO
+	_outputNormals = []			# List of vertex normals
 
 	_marked = []				# List of bool indicating whether a vertex has already been visited: M in the paper
 	_flagged = []				# List of bool indicating whether a triangle has already been visited: U in the paper
@@ -429,7 +429,7 @@ def initData():
 
 
 # Initialize the EdgeBreaker algorithm by choosing the best fitting starting vertex in the first mesh's triangle
-def initCompression(): # TODO: redo add vectors (actually redo all according to paper)
+def initCompression():
 	global _startingHalfEdge, _previousHeId, _clers, _deltas
 
 	initData()
@@ -441,8 +441,10 @@ def initCompression(): # TODO: redo add vectors (actually redo all according to 
 	# First vertex position
 	addPosToDeltas(previous)
 	# Vector from first to second vertex
-	addDifferenceVectorToDeltas(previous, _startingHalfEdge)
-	addDifferenceVectorToDeltas(_startingHalfEdge, next)
+	# addDifferenceVectorToDeltas(previous, _startingHalfEdge)	# TODO: add back
+	# addDifferenceVectorToDeltas(_startingHalfEdge, next)		# TODO: add back
+	addPosToDeltas(_startingHalfEdge)							# TODO: remove
+	addPosToDeltas(next)										# TODO: remove
 
 	# Mark these vertices as "seen"
 	mark(previous)
@@ -484,8 +486,8 @@ def compressRecursive(halfEdgeId):
 
 		if not isMarked(halfEdgeId):							# 'C' configuration
 			debugPrint(f'{fromTo} Found C configuration in triangle {getTriangleFromHeId(halfEdgeId)}')
-			addCorrectionVectorToDeltas(halfEdgeId)
-			# addDifferenceVectorToDeltas(_previousHeId, halfEdgeId)
+			# addCorrectionVectorToDeltas(halfEdgeId)	# TODO: add back
+			addPosToDeltas(halfEdgeId)					# TODO: remove
 			_clers += 'C'
 
 			mark(halfEdgeId)

@@ -68,7 +68,7 @@ def main():
 	mesh = open3d.io.read_triangle_mesh(f'Models/{model}')
 	
 	# quantizeVertices(mesh, 20)			# Use one...
-	quantizeVerticesRescale(mesh, 20)		# Or the other (depending on the bug you have :p)
+	# quantizeVerticesRescale(mesh, 20)		# Or the other (depending on the bug you have :p)
 
 	print(f'{model} model stats:')
 	print(f'Vertices: {len(mesh.vertices)}')
@@ -101,8 +101,8 @@ def main():
 		decompressedMesh = decompress(clers, deltas, normals, False)
 
 		# Evaluate decompressed mesh quality
-		distance = evaluateWithHausdorff(originalMesh, decompressedMesh)
-		print(f'Hausdorff distance = {distance}')
+		# distance = evaluateWithHausdorff(originalMesh, decompressedMesh)
+		# print(f'Hausdorff distance = {distance}')
 
 		# Show the mesh
 		showMesh(decompressedMesh)

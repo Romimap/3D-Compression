@@ -39,7 +39,7 @@ _heMesh = None 			# The mesh containing half-edges data
 
 _clers = ""				# String storing the CLERS steps of the EdgeBreaker algorithm's path
 _deltas = []			# List of 3D points/vectors storing the first points and the correction vectors
-_normals = []			# TODO
+_normals = []			# List of vertex normals
 
 _M = []					# List of bool indicating whether a vertex has already been visited
 _U = []					# List of bool indicating whether a triangle has already been visited
@@ -78,7 +78,7 @@ def initVars():
 
 	_clers = ""				# String storing the CLERS steps of the EdgeBreaker algorithm's path
 	_deltas = []			# List of 3D points/vectors storing the first points and the correction vectors
-	_normals = []			# TODO
+	_normals = []			# List of vertex normals
 
 	_M = []					# List of bool indicating whether a vertex has already been visited
 	_U = []					# List of bool indicating whether a triangle has already been visited
@@ -363,7 +363,9 @@ def decompressVertices(c):
 		_U[triangle(c)] = True
 		if _M[_V[c]] == False:
 			_N += 1
-			_G[_N] = addVectors3D(addVectors3D(addVectors3D(_G[_V[previous(c)]], _G[_V[next(c)]]), oppositeVector(_G[_V[_O[c]]])), readDeltas())
+			# TODO: add back
+			# _G[_N] = addVectors3D(addVectors3D(addVectors3D(_G[_V[previous(c)]], _G[_V[next(c)]]), oppositeVector(_G[_V[_O[c]]])), readDeltas())
+			_G[_N] = readDeltas()	# TODO: remove
 			_M[_V[c]] = True
 			c = right(c)
 		else:
@@ -409,8 +411,10 @@ def initDecompression():
 
 	_G = [[0, 0, 0]] * verticesCount
 	_G[0] = readDeltas()
-	_G[1] = addVectors3D(_G[0], readDeltas())
-	_G[2] = addVectors3D(_G[1], readDeltas())
+	# _G[1] = addVectors3D(_G[0], readDeltas())		# TODO: add back
+	# _G[2] = addVectors3D(_G[1], readDeltas())		# TODO: add back
+	_G[1] = readDeltas()							# TODO: remove
+	_G[2] = readDeltas()							# TODO: remove
 	_N = 2
 
 	_M[0] = True
