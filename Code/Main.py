@@ -17,6 +17,7 @@ import sys
 
 from EdgebreakerCompression import compress
 from EdgebreakerDecompression import decompress
+from MeshQualityEvaluation import evaluateWithHausdorff
 from Quantization import resizeMesh, writeHeader, printBitString, quantizeVertices, quantizedPositionsToBitstring, normalsToBitstring, clersToBitstring, readVerticesBits
 from Encryption import scramble, unscramble, xorifyNormals
 from ImportExport import objImporter, objExporter, writeFile, readFile
@@ -28,33 +29,25 @@ def showMesh(mesh):
 	open3d.visualization.draw_geometries([mesh])
 
 
-def preProcess(model, mesh):
+def preProcess(mesh, doPrint = False):
+	if doPrint:
+		print(f'Before preprocessing:')
+		print(f'Vertices: {len(mesh.vertices)}')
+		print(f'Triangles: {len(mesh.triangles)}')
+
 	mesh = mesh.remove_degenerate_triangles()
-	print(f'After remove_degenerate_triangles()... {model} model stats:')
-	print(f'Vertices: {len(mesh.vertices)}')
-	print(f'Triangles: {len(mesh.triangles)}')
-
 	mesh = mesh.remove_duplicated_triangles()
-	print(f'After remove_duplicated_triangles()... {model} model stats:')
-	print(f'Vertices: {len(mesh.vertices)}')
-	print(f'Triangles: {len(mesh.triangles)}')
-
 	mesh = mesh.remove_duplicated_vertices()
-	print(f'After remove_duplicated_vertices()... {model} model stats:')
-	print(f'Vertices: {len(mesh.vertices)}')
-	print(f'Triangles: {len(mesh.triangles)}')
-
 	mesh = mesh.remove_non_manifold_edges()
-	print(f'After remove_non_manifold_edges()... {model} model stats:')
-	print(f'Vertices: {len(mesh.vertices)}')
-	print(f'Triangles: {len(mesh.triangles)}')
-
 	mesh = mesh.remove_unreferenced_vertices()
-	print(f'After remove_unreferenced_vertices()... {model} model stats:')
-	print(f'Vertices: {len(mesh.vertices)}')
-	print(f'Triangles: {len(mesh.triangles)}')
+
+	if doPrint:
+		print(f'After preprocessing:')
+		print(f'Vertices: {len(mesh.vertices)}')
+		print(f'Triangles: {len(mesh.triangles)}')
 
 	return mesh
+
 
 def cryptoCompress (password, model, filename, outputWidget, outputBar):
     outputWidget.insert(INSERT,'Starting Crypto Compression for\n')
@@ -70,7 +63,7 @@ def cryptoCompress (password, model, filename, outputWidget, outputBar):
 
     outputWidget.insert(INSERT,'Quantizing & Processing...\n')
     quantizeVertices(originalMesh, k)
-    preProcess(model, originalMesh)
+    preProcess(originalMesh)
 
     outputWidget.insert(INSERT,'Running EdgeBreaker...\n')
     outputBar['value'] = 40

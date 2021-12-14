@@ -61,7 +61,7 @@ def main():
 
 	doCompress = True
 	doPreProcess = True
-	model = "Igea.obj"
+	model = "XYZ Dragon.obj"
 
 	# Read original mesh and print stats
 	originalMesh = open3d.io.read_triangle_mesh(f'Models/{model}')
