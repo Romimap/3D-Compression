@@ -94,7 +94,7 @@ def objExporter(filepath, mesh):
 
 #Writes and Read from and to a bitstring
 def writeFile(bitstring, filename):
-	bitArray = bitarray.bitarray([0 for _ in range(8-(len(bitstring)%8))] + list(map(int,bitstring)))
+	bitArray = bitarray.bitarray(list(map(int,bitstring)) + [0 for _ in range(8-(len(bitstring)%8))])
 	with open(filename,"wb+") as f:
 		bitArray.tofile(f)
 
@@ -105,5 +105,5 @@ def readFile(filename):
 		for i in bytes:
 			bitstring += '{0:08b}'.format(int(i))
 
-	bitstring = bitstring[7:]
+	#bitstring = bitstring[8:]
 	return bitstring

@@ -1,5 +1,6 @@
 from os import stat
 import tkinter as tk
+import traceback
 
 from tkinter.ttk import Progressbar
 from tkinter import ttk
@@ -58,6 +59,7 @@ def cryptoCompress (password, model, filename, outputWidget, outputBar):
     #Load, Quantize and Process our mesh
     outputWidget.insert(INSERT,'Importing...\n')
     originalMesh = objImporter(model)
+    
     outputWidget.insert(INSERT,'Quantizing & Processing...\n')
     quantizeVertices(originalMesh, k)
     mesh = preProcess(model, originalMesh)
@@ -80,6 +82,8 @@ def cryptoCompress (password, model, filename, outputWidget, outputBar):
     bitstring += verticesBitstring
     bitstring += normalsBitstring
     bitstring += clersBitstring
+
+    print(f'{len(verticesBitstring)} - {len(normalsBitstring)} - {len(clersBitstring)}')
 
     outputWidget.insert(INSERT,'Encrypting...\n')
     outputBar['value'] = 80
@@ -187,7 +191,9 @@ def main():
                 modelFilename = filename
                 compressedFilename = filename[:-4] + ".rfcp"
                 cryptoCompress(password, modelFilename, compressedFilename, logBox, bar)
-        except:
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
             logBox.insert(INSERT,'\nFatal Error, Aborting\n\n')
             bar['value'] = 0
 

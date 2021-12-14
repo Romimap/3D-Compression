@@ -12,6 +12,8 @@ def xorifyNormals (bitstring, k, key):
     bitstring = list(bitstring)
     startindex = headerSize + (3 * k * vertexNb)
     endindex = startindex + vertexNb * 17
+
+    print(f'{startindex} -> {endindex},  vnb : {vertexNb},  lbs : {len(bitstring)}')
     for k in range(startindex, endindex):
         if int(bitstring[k]) == random.randint(0, 1):
             bitstring[k] = '0'

@@ -205,6 +205,39 @@ def quantizeVertices(mesh, k):
 
     return bitstring
 
+def makeHeader(mesh, k, deltas):
+    vertices = numpy.asarray(mesh.vertices)
+
+    print("vnb @ quantization: " + str(len(vertices)))
+
+    bitstring = ''
+    bitstring += '{0:04b}'.format(k)
+    bitstring += '{0:032b}'.format(len(deltas))
+    print("bin : " + bitstring[4:])
+
+    # * * * * * * * * * *
+    # * * POSITIONS * * *
+    # * * * * * * * * * *
+    #Compute AABB
+    min = numpy.array([999999.9, 999999.9, 999999.9])
+    max = numpy.array([-999999.9, -999999.9, -999999.9])
+
+    for vertex in vertices:
+        if vertex[0] > max[0]: max[0] = vertex[0]
+        if vertex[1] > max[1]: max[1] = vertex[1]
+        if vertex[2] > max[2]: max[2] = vertex[2]
+        if vertex[0] < min[0]: min[0] = vertex[0]
+        if vertex[1] < min[1]: min[1] = vertex[1]
+        if vertex[2] < min[2]: min[2] = vertex[2]
+
+    bitstring += float_to_bin(numpy.float32(min[0]))
+    bitstring += float_to_bin(numpy.float32(min[1]))
+    bitstring += float_to_bin(numpy.float32(min[2]))
+    bitstring += float_to_bin(numpy.float32(max[0]))
+    bitstring += float_to_bin(numpy.float32(max[1]))
+    bitstring += float_to_bin(numpy.float32(max[2]))
+
+
 #Returns the bitstring representing the positions of our mesh
 def quantizedPositionsToBitstring(vertices, k):
     bitstring = ''
@@ -212,6 +245,8 @@ def quantizedPositionsToBitstring(vertices, k):
         bitstring += str('{0:0' + str(k) + 'b}').format(int(vertex[0]))
         bitstring += str('{0:0' + str(k) + 'b}').format(int(vertex[1]))
         bitstring += str('{0:0' + str(k) + 'b}').format(int(vertex[2]))
+
+    print(f'AAAAAAAAAAAA {len(bitstring)} {len(vertices)}')
     return bitstring
 
 #Returns the bitstring representing the normals of our mesh
@@ -233,14 +268,15 @@ def normalsToBitstring(normals, k):
     return bitstring
 
 def clersToBitstring(clers):
-    bitstring = ""
     clersList = list(clers)
+    bitstring = '{0:032b}'.format(len(clersList))
     for c in clersList:
         if c == "C": bitstring += "0"
         if c == "L": bitstring += "100"
         if c == "E": bitstring += "101"
         if c == "R": bitstring += "110"
         if c == "S": bitstring += "111"
+    print(bitstring)
     return bitstring
 
 
@@ -360,8 +396,12 @@ def readVerticesBits(bitstring):
 
     # CLERS
     clers = ""
+    clerslen = int(bitstring[n:n + 32], 2)
+    print(f'{clerslen} @ {n} : {bitstring[n:n + 32]}')
+    print(f'{bitstring[n - 512: n + 512]}')
+    n += 32
     i = n
-    while i in range(n, len(bitstring)):
+    for _ in range(0, clerslen):
         if bitstring[i] == "0":
             clers += "C"
             i += 1
