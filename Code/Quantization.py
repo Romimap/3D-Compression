@@ -450,9 +450,9 @@ def readVerticesBits(bitstring):
         n += k
 
         #if the MSB is 1, convert to negative
-        if x >= 512: x = (x - 512) * -1
-        if y >= 512: y = (y - 512) * -1
-        if z >= 512: z = (z - 512) * -1
+        #if x >= 512: x = (x - 512) * -1
+        #if y >= 512: y = (y - 512) * -1
+        #if z >= 512: z = (z - 512) * -1
 
         vertex = numpy.array([x, y, z])
         vertices[i] = vertex
