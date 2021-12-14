@@ -187,6 +187,40 @@ def quantizeVertices(mesh, k):
         vertex[1] = y
         vertex[2] = z
 
+def quantizeVerticesRescale(mesh, k):
+    vertices = numpy.asarray(mesh.vertices)
+
+    # * * * * * * * * * *
+    # * * POSITIONS * * *
+    # * * * * * * * * * *
+    #Compute AABB
+    min = numpy.array([999999.9, 999999.9, 999999.9])
+    max = numpy.array([-999999.9, -999999.9, -999999.9])
+
+    for vertex in vertices:
+        if vertex[0] > max[0]: max[0] = vertex[0]
+        if vertex[1] > max[1]: max[1] = vertex[1]
+        if vertex[2] > max[2]: max[2] = vertex[2]
+        if vertex[0] < min[0]: min[0] = vertex[0]
+        if vertex[1] < min[1]: min[1] = vertex[1]
+        if vertex[2] < min[2]: min[2] = vertex[2]
+
+    #Normalize coordinates into a unit AABB
+    for vertex in vertices:
+        vertex[0] = remap(vertex[0], min[0], max[0], 0, 1)
+        vertex[1] = remap(vertex[1], min[1], max[1], 0, 1)
+        vertex[2] = remap(vertex[2], min[2], max[2], 0, 1)
+
+    #Quantize
+    kpow = pow(2, k) - 1
+    for vertex in vertices:
+        x = int(round(kpow * vertex[0]))
+        y = int(round(kpow * vertex[1]))
+        z = int(round(kpow * vertex[2]))
+        vertex[0] = remap(x, 0, kpow, min[0], max[0])
+        vertex[1] = remap(y, 0, kpow, min[1], max[1])
+        vertex[2] = remap(z, 0, kpow, min[2], max[2])
+
 
 #Returns the bitstring representing the positions of our mesh
 def quantizedPositionsToBitstring(vertices, k):
@@ -315,6 +349,31 @@ def writeHeader (mesh, k, deltas):
     return bitstring
 
 
+def resizeMesh(bitstring, mesh, k):
+    vertices = numpy.asarray(mesh.vertices)
+
+    # AABB
+    minbitstring = bitstring[36:132]
+    maxbitstring = bitstring[132:228]
+
+    minx = bin_to_float(minbitstring[0:32])
+    miny = bin_to_float(minbitstring[32:64])
+    minz = bin_to_float(minbitstring[64:96])
+
+    maxx = bin_to_float(maxbitstring[0:32])
+    maxy = bin_to_float(maxbitstring[32:64])
+    maxz = bin_to_float(maxbitstring[64:96])
+
+    min = numpy.array([minx, miny, minz])
+    max = numpy.array([maxx, maxy, maxz])
+
+    kpow = pow(2, k) - 1
+    for v in vertices:
+        v[0] = remap(v[0], 0, kpow, min[0], max[0])
+        v[1] = remap(v[1], 0, kpow, min[1], max[1])
+        v[2] = remap(v[2], 0, kpow, min[2], max[2])
+
+    mesh.vertices = open3d.utility.Vector3dVector(vertices)
 
 
 def readVerticesBits(bitstring):
@@ -360,12 +419,7 @@ def readVerticesBits(bitstring):
         if y >= 512: y = (y - 512) * -1
         if z >= 512: z = (z - 512) * -1
 
-        vertex = numpy.array([
-            #remap(x, 0, kpow, min[0], max[0]),
-            #remap(y, 0, kpow, min[1], max[1]),
-            #remap(z, 0, kpow, min[2], max[2])
-            x, y, z
-        ])
+        vertex = numpy.array([x, y, z])
         vertices[i] = vertex
 
     # Normals

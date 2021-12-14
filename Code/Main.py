@@ -2,6 +2,7 @@ from os import stat
 import tkinter as tk
 import traceback
 import copy
+import numpy
 
 from tkinter.ttk import Progressbar
 from tkinter import ttk
@@ -16,7 +17,7 @@ import sys
 
 from EdgebreakerCompression import compress
 from EdgebreakerDecompression import decompress
-from Quantization import writeHeader, printBitString, quantizeVertices, quantizedPositionsToBitstring, normalsToBitstring, clersToBitstring, readVerticesBits
+from Quantization import resizeMesh, writeHeader, printBitString, quantizeVertices, quantizedPositionsToBitstring, normalsToBitstring, clersToBitstring, readVerticesBits
 from Encryption import scramble, unscramble, xorifyNormals
 from ImportExport import objImporter, objExporter, writeFile, readFile
 from tkinter import *
@@ -134,6 +135,8 @@ def cryptoExtract (password, filename, modelFilename, outputWidget, outputBar):
     outputBar['value'] = 60
     #Run the Edgebreaker decryption
     decompressedMesh = decompress(clers, deltas, normals, False)
+
+    resizeMesh(bitstring, decompressedMesh, 10)
 
     outputWidget.insert(INSERT,'Writing file...\n')
     outputBar['value'] = 80
